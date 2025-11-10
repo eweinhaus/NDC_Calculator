@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: ndc-calculator
+    runtime: node
+    plan: starter
+    region: oregon
+    buildCommand: npm ci && npm run build
+    startCommand: node build
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: OPENAI_API_KEY
+        sync: false  # Set this in Render dashboard
+    autoDeploy: true
+
