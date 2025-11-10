@@ -1,0 +1,27 @@
+{
+	"extends": "./.svelte-kit/tsconfig.json",
+	"compilerOptions": {
+		"allowJs": true,
+		"checkJs": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
+		"skipLibCheck": true,
+		"sourceMap": true,
+		"strict": true,
+		"target": "ES2022",
+		"module": "ES2022",
+		"moduleResolution": "bundler",
+		"paths": {
+			"$lib": ["./src/lib"],
+			"$lib/*": ["./src/lib/*"],
+			"$lib/types/*": ["./src/lib/types/*"],
+			"$lib/utils/*": ["./src/lib/utils/*"],
+			"$lib/core/*": ["./src/lib/core/*"],
+			"$lib/services/*": ["./src/lib/services/*"]
+		}
+	},
+	"include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte"],
+	"exclude": ["node_modules"]
+}
+

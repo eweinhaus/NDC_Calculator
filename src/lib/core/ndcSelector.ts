@@ -1,0 +1,220 @@
+/**
+ * NDC selector with ranking algorithm.
+ * Selects optimal NDCs based on calculated quantity.
+ */
+
+import { NdcInfo, NdcSelection } from '../types/ndc';
+import { parsePackageDescription } from './packageParser';
+import { logger } from '../utils/logger';
+
+/**
+ * Parses package size from NDC info using package parser.
+ */
+function parsePackageSize(ndcInfo: NdcInfo): number | null {
+	// Use packageSize if available (may already be parsed)
+	if (ndcInfo.packageSize && ndcInfo.packageSize > 0) {
+		return ndcInfo.packageSize;
+	}
+
+	// Otherwise, try to parse from packageDescription
+	if (!ndcInfo.packageDescription) {
+		return null;
+	}
+
+	const parsed = parsePackageDescription(ndcInfo.packageDescription);
+	if (!parsed) {
+		return null;
+	}
+
+	// Return quantity per package (not totalQuantity for multi-packs)
+	return parsed.quantity;
+}
+
+/**
+ * Calculates match score for NDC selection (0-100).
+ */
+function calculateMatchScore(
+	selection: NdcSelection,
+	targetQuantity: number
+): number {
+	const { totalQuantity, packageCount } = selection;
+
+	// Exact match
+	if (totalQuantity === targetQuantity) {
+		// Single-pack exact match: 100
+		// Multi-pack exact match: 95
+		return packageCount && packageCount > 1 ? 95 : 100;
+	}
+
+	// Calculate difference percentage
+	const diff = Math.abs(totalQuantity - targetQuantity);
+	const diffPercent = diff / targetQuantity;
+
+	// Near match (within 5%)
+	if (diffPercent <= 0.05) {
+		// Score: 90-99 (proportional to closeness)
+		const closeness = 1 - diffPercent / 0.05;
+		const baseScore = packageCount && packageCount > 1 ? 85 : 90;
+		return baseScore + Math.round(closeness * 9);
+	}
+
+	// Overfill (package > target)
+	if (totalQuantity > targetQuantity) {
+		const overfillPercent = (totalQuantity - targetQuantity) / targetQuantity;
+		// Score: 80-89 (penalized by overfill %)
+		// More overfill = lower score
+		const penalty = Math.min(overfillPercent, 1) * 10;
+		return Math.max(80 - Math.round(penalty), 70);
+	}
+
+	// Underfill (package < target)
+	const underfillPercent = (targetQuantity - totalQuantity) / targetQuantity;
+	// Score: 70-79 (penalized by underfill %)
+	// More underfill = lower score
+	const penalty = Math.min(underfillPercent, 1) * 10;
+	return Math.max(70 - Math.round(penalty), 60);
+}
+
+/**
+ * Generates single-pack selection for an NDC.
+ */
+function generateSinglePackSelection(
+	ndcInfo: NdcInfo,
+	targetQuantity: number
+): NdcSelection | null {
+	const packageSize = parsePackageSize(ndcInfo);
+	if (!packageSize || packageSize <= 0) {
+		return null;
+	}
+
+	const packageCount = 1;
+	const totalQuantity = packageSize;
+	const overfill = Math.max(0, totalQuantity - targetQuantity);
+	const underfill = Math.max(0, targetQuantity - totalQuantity);
+
+	const selection: NdcSelection = {
+		ndc: ndcInfo.ndc,
+		packageSize,
+		packageCount,
+		totalQuantity,
+		overfill,
+		underfill,
+		matchScore: 0, // Will be calculated
+		packageDescription: ndcInfo.packageDescription,
+		manufacturer: ndcInfo.manufacturer,
+	};
+
+	// Calculate match score
+	selection.matchScore = calculateMatchScore(selection, targetQuantity);
+
+	return selection;
+}
+
+/**
+ * Generates multi-pack selection for an NDC.
+ */
+function generateMultiPackSelection(
+	ndcInfo: NdcInfo,
+	targetQuantity: number,
+	maxPackages: number = 10
+): NdcSelection | null {
+	const packageSize = parsePackageSize(ndcInfo);
+	if (!packageSize || packageSize <= 0) {
+		return null;
+	}
+
+	const packageCount = Math.ceil(targetQuantity / packageSize);
+	
+	// Skip if too many packages needed
+	if (packageCount > maxPackages) {
+		return null;
+	}
+
+	const totalQuantity = packageCount * packageSize;
+	const overfill = totalQuantity - targetQuantity; // Always >= 0 for multi-pack
+	const underfill = 0; // Multi-pack always meets or exceeds target
+
+	const selection: NdcSelection = {
+		ndc: ndcInfo.ndc,
+		packageSize,
+		packageCount,
+		totalQuantity,
+		overfill,
+		underfill,
+		matchScore: 0, // Will be calculated
+		packageDescription: ndcInfo.packageDescription,
+		manufacturer: ndcInfo.manufacturer,
+	};
+
+	// Calculate match score
+	selection.matchScore = calculateMatchScore(selection, targetQuantity);
+
+	return selection;
+}
+
+/**
+ * Selects optimal NDCs based on target quantity.
+ * @param ndcList - List of NDC information
+ * @param targetQuantity - Target quantity to match
+ * @param maxResults - Maximum number of results to return (default: 5)
+ * @returns Array of NDC selections ranked by match score
+ */
+export function selectOptimal(
+	ndcList: NdcInfo[],
+	targetQuantity: number,
+	maxResults: number = 5
+): NdcSelection[] {
+	if (!ndcList || ndcList.length === 0) {
+		return [];
+	}
+
+	if (targetQuantity <= 0) {
+		logger.warn('Invalid target quantity for NDC selection', { targetQuantity });
+		return [];
+	}
+
+	const candidates: NdcSelection[] = [];
+	const inactiveNdcs: NdcInfo[] = [];
+
+	// Process each NDC
+	for (const ndcInfo of ndcList) {
+		// Filter out inactive NDCs (store for warnings)
+		if (!ndcInfo.active) {
+			inactiveNdcs.push(ndcInfo);
+			continue;
+		}
+
+		// Generate single-pack selection
+		const singlePack = generateSinglePackSelection(ndcInfo, targetQuantity);
+		if (singlePack) {
+			candidates.push(singlePack);
+		}
+
+		// Generate multi-pack selection
+		const multiPack = generateMultiPackSelection(ndcInfo, targetQuantity);
+		if (multiPack) {
+			candidates.push(multiPack);
+		}
+	}
+
+	// Log inactive NDCs for warnings
+	if (inactiveNdcs.length > 0) {
+		logger.debug(`Filtered ${inactiveNdcs.length} inactive NDCs`, {
+			inactiveNdcs: inactiveNdcs.map((n) => n.ndc),
+		});
+	}
+
+	// Rank by match score (descending)
+	candidates.sort((a, b) => b.matchScore - a.matchScore);
+
+	// Return top results
+	const results = candidates.slice(0, maxResults);
+
+	logger.debug(`Selected ${results.length} optimal NDCs from ${candidates.length} candidates`, {
+		targetQuantity,
+		topScore: results[0]?.matchScore,
+	});
+
+	return results;
+}
+

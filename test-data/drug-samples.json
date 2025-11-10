@@ -1,0 +1,114 @@
+[
+  {
+    "name": "Lisinopril",
+    "rxcui": "29046",
+    "ndcs": ["76420-345-00", "76420-345-01", "76420-345-30", "76420-345-60", "76420-345-90"],
+    "strength": "40 mg/1",
+    "dosageForm": "TABLET",
+    "type": "generic",
+    "manufacturer": "Asclemed USA, Inc.",
+    "productNdc": "76420-345"
+  },
+  {
+    "name": "Lisinopril",
+    "rxcui": "314076",
+    "ndcs": ["42708-094-30"],
+    "strength": "10 mg/1",
+    "dosageForm": "TABLET",
+    "type": "generic",
+    "manufacturer": "QPharma, Inc.",
+    "productNdc": "42708-094"
+  },
+  {
+    "name": "Lisinopril",
+    "rxcui": "311354",
+    "ndcs": ["63629-1761-1", "63629-1761-2", "63629-1761-3", "63629-1761-4", "63629-1761-5", "63629-1761-6"],
+    "strength": "5 mg/1",
+    "dosageForm": "TABLET",
+    "type": "generic",
+    "manufacturer": "Bryant Ranch Prepack",
+    "productNdc": "63629-1761"
+  },
+  {
+    "name": "Metformin Hydrochloride",
+    "rxcui": "861004",
+    "ndcs": ["50090-7586-0", "50090-7586-2", "50090-7586-3", "50090-7586-4", "50090-7586-5"],
+    "strength": "1000 mg/1",
+    "dosageForm": "TABLET",
+    "type": "generic",
+    "manufacturer": "A-S Medication Solutions",
+    "productNdc": "50090-7586"
+  },
+  {
+    "name": "Metformin Hydrochloride",
+    "rxcui": "860975",
+    "ndcs": ["65162-179-03", "65162-179-09", "65162-179-10", "65162-179-50"],
+    "strength": "750 mg/1",
+    "dosageForm": "TABLET, EXTENDED RELEASE",
+    "type": "generic",
+    "manufacturer": "Amneal Pharmaceuticals LLC",
+    "productNdc": "65162-179"
+  },
+  {
+    "name": "Metformin Hydrochloride",
+    "rxcui": "861004",
+    "ndcs": ["65862-010-01", "65862-010-05", "65862-010-33", "65862-010-46", "65862-010-50", "65862-010-60", "65862-010-90", "65862-010-99"],
+    "strength": "1000 mg/1",
+    "dosageForm": "TABLET, FILM COATED",
+    "type": "generic",
+    "manufacturer": "Aurobindo Pharma Limited",
+    "productNdc": "65862-010"
+  },
+  {
+    "name": "Metformin Hydrochloride",
+    "rxcui": "861004",
+    "ndcs": ["71335-1303-0", "71335-1303-1", "71335-1303-2", "71335-1303-3", "71335-1303-4", "71335-1303-5", "71335-1303-6", "71335-1303-7", "71335-1303-8", "71335-1303-9"],
+    "strength": "500 mg/1",
+    "dosageForm": "TABLET, COATED",
+    "type": "generic",
+    "manufacturer": "Bryant Ranch Prepack",
+    "productNdc": "71335-1303"
+  },
+  {
+    "name": "Atorvastatin",
+    "rxcui": "83367",
+    "ndcs": [],
+    "strength": "Various",
+    "dosageForm": "TABLET",
+    "type": "generic",
+    "manufacturer": "Various",
+    "productNdc": "Various",
+    "notes": "RxCUI found but allndcs endpoint returned empty. Use FDA API search instead."
+  },
+  {
+    "name": "Gabapentin",
+    "rxcui": "310433",
+    "ndcs": ["76282-707-05", "76282-707-90"],
+    "strength": "800 mg/1",
+    "dosageForm": "TABLET",
+    "type": "generic",
+    "manufacturer": "Exelan Pharmaceuticals, Inc.",
+    "productNdc": "76282-707"
+  },
+  {
+    "name": "Prednisone",
+    "rxcui": "198145",
+    "ndcs": ["80425-0484-1"],
+    "strength": "10 mg/1",
+    "dosageForm": "TABLET",
+    "type": "generic",
+    "manufacturer": "Advanced Rx of Tennessee, LLC",
+    "productNdc": "80425-0484"
+  },
+  {
+    "name": "Methylprednisolone",
+    "rxcui": "259966",
+    "ndcs": ["80425-0231-1"],
+    "strength": "4 mg/1",
+    "dosageForm": "TABLET",
+    "type": "generic",
+    "manufacturer": "Advanced Rx Pharmacy of Tennessee, LLC",
+    "productNdc": "80425-0231"
+  }
+]
+

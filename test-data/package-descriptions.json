@@ -1,0 +1,228 @@
+[
+  {
+    "description": "30 TABLET in 1 BOTTLE (76420-345-30)",
+    "expectedQuantity": 30,
+    "formatType": "simple",
+    "sourceNdc": "76420-345-30",
+    "unit": "TABLET"
+  },
+  {
+    "description": "100 TABLET in 1 BOTTLE (76420-345-01)",
+    "expectedQuantity": 100,
+    "formatType": "simple",
+    "sourceNdc": "76420-345-01",
+    "unit": "TABLET"
+  },
+  {
+    "description": "90 TABLET in 1 BOTTLE (76420-345-90)",
+    "expectedQuantity": 90,
+    "formatType": "simple",
+    "sourceNdc": "76420-345-90",
+    "unit": "TABLET"
+  },
+  {
+    "description": "60 TABLET in 1 BOTTLE (76420-345-60)",
+    "expectedQuantity": 60,
+    "formatType": "simple",
+    "sourceNdc": "76420-345-60",
+    "unit": "TABLET"
+  },
+  {
+    "description": "1000 TABLET in 1 BOTTLE (76420-345-00)",
+    "expectedQuantity": 1000,
+    "formatType": "simple",
+    "sourceNdc": "76420-345-00",
+    "unit": "TABLET"
+  },
+  {
+    "description": "30 TABLET, EXTENDED RELEASE in 1 BOTTLE (65162-179-03)",
+    "expectedQuantity": 30,
+    "formatType": "with_dosage_form",
+    "sourceNdc": "65162-179-03",
+    "unit": "TABLET"
+  },
+  {
+    "description": "90 TABLET, EXTENDED RELEASE in 1 BOTTLE (65162-179-09)",
+    "expectedQuantity": 90,
+    "formatType": "with_dosage_form",
+    "sourceNdc": "65162-179-09",
+    "unit": "TABLET"
+  },
+  {
+    "description": "100 TABLET, FILM COATED in 1 BOTTLE (65862-010-01)",
+    "expectedQuantity": 100,
+    "formatType": "with_dosage_form",
+    "sourceNdc": "65862-010-01",
+    "unit": "TABLET"
+  },
+  {
+    "description": "500 TABLET, FILM COATED in 1 BOTTLE (65862-010-05)",
+    "expectedQuantity": 500,
+    "formatType": "with_dosage_form",
+    "sourceNdc": "65862-010-05",
+    "unit": "TABLET"
+  },
+  {
+    "description": "30 TABLET, COATED in 1 BOTTLE (71335-1303-1)",
+    "expectedQuantity": 30,
+    "formatType": "with_dosage_form",
+    "sourceNdc": "71335-1303-1",
+    "unit": "TABLET"
+  },
+  {
+    "description": "1 BLISTER PACK in 1 CARTON (80425-0231-1)  / 21 TABLET in 1 BLISTER PACK",
+    "expectedQuantity": 21,
+    "formatType": "multi_pack",
+    "sourceNdc": "80425-0231-1",
+    "unit": "TABLET"
+  },
+  {
+    "description": "25 VIAL in 1 CARTON (80327-013-00)  / 5 mL in 1 VIAL",
+    "expectedQuantity": 125,
+    "formatType": "multi_pack",
+    "sourceNdc": "80327-013-00",
+    "unit": "mL",
+    "notes": "25 vials × 5 mL = 125 mL total"
+  },
+  {
+    "description": "1 BOTTLE, SPRAY in 1 CARTON (79903-295-72)  / 72 SPRAY, METERED in 1 BOTTLE, SPRAY",
+    "expectedQuantity": 72,
+    "formatType": "spray_actuation",
+    "sourceNdc": "79903-295-72",
+    "unit": "SPRAY"
+  },
+  {
+    "description": "87.1 g in 1 PACKAGE (79804-618-03)",
+    "expectedQuantity": 87.1,
+    "formatType": "liquid_weight",
+    "sourceNdc": "79804-618-03",
+    "unit": "g"
+  },
+  {
+    "description": "35.5 mL in 1 BOTTLE",
+    "expectedQuantity": 35.5,
+    "formatType": "liquid_volume",
+    "sourceNdc": "76354-473-01",
+    "unit": "mL"
+  },
+  {
+    "description": "5 mL in 1 VIAL, MULTI-DOSE (76420-007-05)",
+    "expectedQuantity": 5,
+    "formatType": "liquid_volume",
+    "sourceNdc": "76420-007-05",
+    "unit": "mL"
+  },
+  {
+    "description": "21 TABLET in 1 BOTTLE, PLASTIC (80425-0484-1)",
+    "expectedQuantity": 21,
+    "formatType": "with_container_type",
+    "sourceNdc": "80425-0484-1",
+    "unit": "TABLET"
+  },
+  {
+    "description": "28 TABLET in 1 BOTTLE (63629-1761-6)",
+    "expectedQuantity": 28,
+    "formatType": "simple",
+    "sourceNdc": "63629-1761-6",
+    "unit": "TABLET"
+  },
+  {
+    "description": "56 TABLET in 1 BOTTLE (71335-1303-7)",
+    "expectedQuantity": 56,
+    "formatType": "simple",
+    "sourceNdc": "71335-1303-7",
+    "unit": "TABLET"
+  },
+  {
+    "description": "180 TABLET in 1 BOTTLE (71335-1303-8)",
+    "expectedQuantity": 180,
+    "formatType": "simple",
+    "sourceNdc": "71335-1303-8",
+    "unit": "TABLET"
+  },
+  {
+    "description": "10 TABLET in 1 BOTTLE (63629-1761-5)",
+    "expectedQuantity": 10,
+    "formatType": "simple",
+    "sourceNdc": "63629-1761-5",
+    "unit": "TABLET"
+  },
+  {
+    "description": "120 TABLET in 1 BOTTLE (71335-1303-4)",
+    "expectedQuantity": 120,
+    "formatType": "simple",
+    "sourceNdc": "71335-1303-4",
+    "unit": "TABLET"
+  },
+  {
+    "description": "2000 TABLET in 1 BOTTLE (65862-010-46)",
+    "expectedQuantity": 2000,
+    "formatType": "simple",
+    "sourceNdc": "65862-010-46",
+    "unit": "TABLET"
+  },
+  {
+    "description": "300 TABLET in 1 BOTTLE (65862-010-33)",
+    "expectedQuantity": 300,
+    "formatType": "simple",
+    "sourceNdc": "65862-010-33",
+    "unit": "TABLET"
+  },
+  {
+    "description": "50 TABLET in 1 BOTTLE (65862-010-50)",
+    "expectedQuantity": 50,
+    "formatType": "simple",
+    "sourceNdc": "65862-010-50",
+    "unit": "TABLET"
+  },
+  {
+    "description": "1000 TABLET, FILM COATED in 1 BOTTLE (65862-010-99)",
+    "expectedQuantity": 1000,
+    "formatType": "with_dosage_form",
+    "sourceNdc": "65862-010-99",
+    "unit": "TABLET"
+  },
+  {
+    "description": "60 TABLET, EXTENDED RELEASE in 1 BOTTLE (27241-189-60)",
+    "expectedQuantity": 60,
+    "formatType": "with_dosage_form",
+    "sourceNdc": "27241-189-60",
+    "unit": "TABLET"
+  },
+  {
+    "description": "500 TABLET, EXTENDED RELEASE in 1 BOTTLE (65162-179-50)",
+    "expectedQuantity": 500,
+    "formatType": "with_dosage_form",
+    "sourceNdc": "65162-179-50",
+    "unit": "TABLET"
+  },
+  {
+    "description": "100 TABLET, EXTENDED RELEASE in 1 BOTTLE (65162-179-10)",
+    "expectedQuantity": 100,
+    "formatType": "with_dosage_form",
+    "sourceNdc": "65162-179-10",
+    "unit": "TABLET"
+  },
+  {
+    "description": "60 TABLET in 1 BOTTLE (50090-7586-0)",
+    "expectedQuantity": 60,
+    "formatType": "simple",
+    "sourceNdc": "50090-7586-0",
+    "unit": "TABLET"
+  },
+  {
+    "description": "180 TABLET in 1 BOTTLE (50090-7586-5)",
+    "expectedQuantity": 180,
+    "formatType": "simple",
+    "sourceNdc": "50090-7586-5",
+    "unit": "TABLET"
+  },
+  {
+    "description": "500 TABLET in 1 BOTTLE (76282-707-05)",
+    "expectedQuantity": 500,
+    "formatType": "simple",
+    "sourceNdc": "76282-707-05",
+    "unit": "TABLET"
+  }
+]
+

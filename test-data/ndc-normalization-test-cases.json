@@ -1,0 +1,133 @@
+[
+  {
+    "input": "00002322730",
+    "expectedOutput": "00002-3227-30",
+    "format": "10-digit",
+    "description": "10-digit format without dashes"
+  },
+  {
+    "input": "00002-3227-30",
+    "expectedOutput": "00002-3227-30",
+    "format": "11-digit-with-dashes",
+    "description": "Already normalized format"
+  },
+  {
+    "input": "0002-3227-30",
+    "expectedOutput": "00002-3227-30",
+    "format": "10-digit-with-dashes",
+    "description": "10-digit with dashes, missing leading zero"
+  },
+  {
+    "input": "76420-345-30",
+    "expectedOutput": "76420-345-30",
+    "format": "11-digit-with-dashes",
+    "description": "Already normalized"
+  },
+  {
+    "input": "7642034530",
+    "expectedOutput": "76420-345-30",
+    "format": "10-digit",
+    "description": "10-digit without dashes"
+  },
+  {
+    "input": "7642-345-30",
+    "expectedOutput": "07642-0345-30",
+    "format": "10-digit-with-dashes-incomplete",
+    "description": "Incomplete labeler and product codes"
+  },
+  {
+    "input": "76420-345-0",
+    "expectedOutput": "76420-345-00",
+    "format": "incomplete-package-code",
+    "description": "Package code needs padding"
+  },
+  {
+    "input": "76420-345-00",
+    "expectedOutput": "76420-345-00",
+    "format": "11-digit-with-dashes",
+    "description": "Already normalized with padded package"
+  },
+  {
+    "input": "42708-094-30",
+    "expectedOutput": "42708-094-30",
+    "format": "11-digit-with-dashes",
+    "description": "Standard format"
+  },
+  {
+    "input": "63629-1761-1",
+    "expectedOutput": "63629-1761-01",
+    "format": "incomplete-package-code",
+    "description": "Package code needs padding"
+  },
+  {
+    "input": "50090-7586-0",
+    "expectedOutput": "50090-7586-00",
+    "format": "incomplete-package-code",
+    "description": "Package code needs padding"
+  },
+  {
+    "input": "65162-179-03",
+    "expectedOutput": "65162-179-03",
+    "format": "11-digit-with-dashes",
+    "description": "Standard format"
+  },
+  {
+    "input": "65862-010-01",
+    "expectedOutput": "65862-010-01",
+    "format": "11-digit-with-dashes",
+    "description": "Standard format"
+  },
+  {
+    "input": "71335-1303-1",
+    "expectedOutput": "71335-1303-01",
+    "format": "incomplete-package-code",
+    "description": "Package code needs padding"
+  },
+  {
+    "input": "79804-618-03",
+    "expectedOutput": "79804-618-03",
+    "format": "11-digit-with-dashes",
+    "description": "Standard format"
+  },
+  {
+    "input": "76282-707-05",
+    "expectedOutput": "76282-707-05",
+    "format": "11-digit-with-dashes",
+    "description": "Standard format"
+  },
+  {
+    "input": "80425-0231-1",
+    "expectedOutput": "80425-0231-01",
+    "format": "incomplete-package-code",
+    "description": "Package code needs padding"
+  },
+  {
+    "input": "123",
+    "expectedOutput": null,
+    "format": "invalid",
+    "description": "Too short - invalid format",
+    "shouldError": true
+  },
+  {
+    "input": "abc-123-def",
+    "expectedOutput": null,
+    "format": "invalid",
+    "description": "Non-numeric characters - invalid format",
+    "shouldError": true
+  },
+  {
+    "input": "000023227301",
+    "expectedOutput": null,
+    "format": "invalid",
+    "description": "Too long - invalid format",
+    "shouldError": true
+  },
+  {
+    "input": "76420-345",
+    "expectedOutput": null,
+    "format": "invalid",
+    "description": "Missing package code - invalid format",
+    "shouldError": true
+  }
+]
+

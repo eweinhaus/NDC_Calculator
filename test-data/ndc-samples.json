@@ -1,0 +1,94 @@
+[
+  {
+    "ndc": "76420-345-30",
+    "normalized": "76420-345-30",
+    "packageSize": 30,
+    "active": true,
+    "format": "11-digit-with-dashes"
+  },
+  {
+    "ndc": "7642034530",
+    "normalized": "76420-345-30",
+    "packageSize": 30,
+    "active": true,
+    "format": "10-digit"
+  },
+  {
+    "ndc": "7642-345-30",
+    "normalized": "07642-0345-30",
+    "packageSize": 30,
+    "active": true,
+    "format": "10-digit-with-dashes",
+    "notes": "Requires leading zero padding"
+  },
+  {
+    "ndc": "42708-094-30",
+    "normalized": "42708-094-30",
+    "packageSize": 30,
+    "active": true,
+    "format": "11-digit-with-dashes"
+  },
+  {
+    "ndc": "63629-1761-1",
+    "normalized": "63629-1761-01",
+    "packageSize": 30,
+    "active": true,
+    "format": "11-digit-with-dashes",
+    "notes": "Package code needs padding"
+  },
+  {
+    "ndc": "50090-7586-0",
+    "normalized": "50090-7586-00",
+    "packageSize": 60,
+    "active": true,
+    "format": "11-digit-with-dashes",
+    "notes": "Package code needs padding"
+  },
+  {
+    "ndc": "65162-179-03",
+    "normalized": "65162-179-03",
+    "packageSize": 30,
+    "active": true,
+    "format": "11-digit-with-dashes"
+  },
+  {
+    "ndc": "65862-010-01",
+    "normalized": "65862-010-01",
+    "packageSize": 100,
+    "active": true,
+    "format": "11-digit-with-dashes"
+  },
+  {
+    "ndc": "71335-1303-1",
+    "normalized": "71335-1303-01",
+    "packageSize": 30,
+    "active": true,
+    "format": "11-digit-with-dashes",
+    "notes": "Package code needs padding"
+  },
+  {
+    "ndc": "79804-618-03",
+    "normalized": "79804-618-03",
+    "packageSize": 87.1,
+    "active": true,
+    "format": "11-digit-with-dashes",
+    "unit": "g",
+    "notes": "Liquid/cream product"
+  },
+  {
+    "ndc": "76282-707-05",
+    "normalized": "76282-707-05",
+    "packageSize": 500,
+    "active": true,
+    "format": "11-digit-with-dashes"
+  },
+  {
+    "ndc": "80425-0231-1",
+    "normalized": "80425-0231-01",
+    "packageSize": 21,
+    "active": true,
+    "format": "11-digit-with-dashes",
+    "notes": "Package code needs padding"
+  }
+]
+

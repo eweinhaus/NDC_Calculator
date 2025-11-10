@@ -1,0 +1,239 @@
+%% NDC Packaging & Quantity Calculator - System Architecture
+%% Foundation Health - Take Home Project
+%%
+%% KEY ARCHITECTURAL DECISIONS:
+%% 1. API Flow: RxNorm provides NDC lists, FDA provides package details (NOT direct RxCUI→NDC from FDA)
+%% 2. SIG Parsing: Regex-first approach (primary), OpenAI fallback only for complex cases (cost optimization)
+%% 3. Caching: Aggressive caching with appropriate TTLs (7d for drugs, 24h for NDCs, 30d for SIG patterns)
+%% 4. Parallel Processing: NDC fetching and SIG parsing run concurrently to meet <2s response target
+%% 5. Request Deduplication: Coalesce identical concurrent requests to reduce API load
+
+graph TB
+    subgraph "Frontend Layer"
+        UI[User Interface<br/>+page.svelte]
+        FORM[Input Form<br/>Drug/SIG/Days Supply]
+        RESULTS[Results Display<br/>NDCs/Warnings/Alternatives]
+        ERRORS[Error States<br/>User Feedback]
+        
+        UI --> FORM
+        UI --> RESULTS
+        UI --> ERRORS
+    end
+    
+    subgraph "API Layer - SvelteKit"
+        API[API Route<br/>/api/calculate/+server.ts]
+        VALIDATOR[Input Validator<br/>validator.ts]
+        ORCHESTRATOR[Calculation Orchestrator<br/>Coordinates Services]
+        FORMATTER[Response Formatter<br/>JSON Structure]
+        
+        API --> VALIDATOR
+        VALIDATOR --> ORCHESTRATOR
+        ORCHESTRATOR --> FORMATTER
+    end
+    
+    subgraph "Service Layer"
+        RXNORM[RxNorm Service<br/>rxnorm.ts]
+        FDA[FDA NDC Service<br/>fda.ts]
+        OPENAI[OpenAI Service<br/>openai.ts]
+        CACHE[Cache Service<br/>cache.ts]
+        
+        RXNORM --> CACHE
+        FDA --> CACHE
+        OPENAI --> CACHE
+    end
+    
+    subgraph "Core Logic Layer"
+        REGEX_SIG[Regex SIG Parser<br/>regexSigParser.ts<br/>Primary Parser]
+        AI_SIG[AI SIG Parser<br/>openai.ts<br/>Fallback Only]
+        SIG_ORCHESTRATOR[SIG Parser Orchestrator<br/>sigParser.ts<br/>Regex First, AI if needed]
+        QUANTITY[Quantity Calculator<br/>quantityCalculator.ts]
+        SELECTOR[NDC Selector<br/>ndcSelector.ts<br/>Optimal Matching]
+        PACKAGE_PARSER[Package Parser<br/>packageParser.ts<br/>Parse Descriptions]
+        NDC_NORMALIZER[NDC Normalizer<br/>ndcNormalizer.ts<br/>Format Conversion]
+        
+        REGEX_SIG --> SIG_ORCHESTRATOR
+        AI_SIG --> SIG_ORCHESTRATOR
+        SIG_ORCHESTRATOR --> QUANTITY
+        PACKAGE_PARSER --> SELECTOR
+        NDC_NORMALIZER --> SELECTOR
+    end
+    
+    subgraph "External APIs"
+        RXNORM_API[RxNorm API<br/>Drug Normalization<br/>NDC Lists<br/>Spelling Suggestions]
+        FDA_API[FDA NDC Directory<br/>Package Details<br/>Active Status]
+        OPENAI_API[OpenAI API<br/>Complex SIG Parsing<br/>Fallback Only]
+    end
+    
+    subgraph "Data Storage"
+        MEMORY_CACHE[In-Memory Cache<br/>Map-based LRU<br/>TTL: 24h-30d<br/>Max 1000 entries]
+        REDIS_CACHE[Redis Cache<br/>Production Only<br/>Same TTLs]
+        LOCAL_STORAGE[LocalStorage<br/>Calculation History<br/>User Preferences]
+    end
+    
+    %% User Flow
+    FORM -->|POST Request| API
+    API -->|JSON Response| RESULTS
+    
+    %% Orchestration Flow
+    ORCHESTRATOR -->|1. Normalize Drug| RXNORM
+    ORCHESTRATOR -->|2. Get NDC List| RXNORM
+    ORCHESTRATOR -->|3. Get NDC Details| FDA
+    ORCHESTRATOR -->|4. Parse SIG| SIG_ORCHESTRATOR
+    ORCHESTRATOR -->|5. Calculate| QUANTITY
+    ORCHESTRATOR -->|6. Parse Packages| PACKAGE_PARSER
+    ORCHESTRATOR -->|7. Select NDC| SELECTOR
+    
+    %% Service to External API
+    RXNORM -->|HTTP Request| RXNORM_API
+    FDA -->|HTTP Request| FDA_API
+    OPENAI -->|HTTP Request| OPENAI_API
+    
+    %% Service to Cache
+    RXNORM -.->|Check/Store<br/>TTL: 7d-24h| MEMORY_CACHE
+    FDA -.->|Check/Store<br/>TTL: 24h| MEMORY_CACHE
+    OPENAI -.->|Check/Store<br/>TTL: 30d| MEMORY_CACHE
+    MEMORY_CACHE -.->|Production| REDIS_CACHE
+    
+    %% Data Persistence
+    RESULTS -.->|Save History| LOCAL_STORAGE
+    
+    %% Error Handling
+    RXNORM_API -.->|Error| ERRORS
+    FDA_API -.->|Error| ERRORS
+    OPENAI_API -.->|Error| ERRORS
+    VALIDATOR -.->|Validation Error| ERRORS
+    
+    style UI fill:#e1f5ff
+    style API fill:#fff4e1
+    style ORCHESTRATOR fill:#ffe1f5
+    style CACHE fill:#e1ffe1
+    style MEMORY_CACHE fill:#f0f0f0
+    style RXNORM_API fill:#ffcccc
+    style FDA_API fill:#ffcccc
+    style OPENAI_API fill:#ffcccc
+
+%% ============================================
+%% Request Flow Sequence Diagram
+%% ============================================
+
+sequenceDiagram
+    participant User
+    participant Frontend as Frontend UI
+    participant API as API Route
+    participant Validator as Input Validator
+    participant Cache as Cache Service
+    participant RxNorm as RxNorm Service
+    participant FDA as FDA Service
+    participant OpenAI as OpenAI Service
+    participant Parser as SIG Parser
+    participant Calc as Quantity Calculator
+    participant Selector as NDC Selector
+    participant RxNormAPI as RxNorm API
+    participant FDAAPI as FDA API
+    participant OpenAIAPI as OpenAI API
+
+    User->>Frontend: Enter Drug/SIG/Days Supply
+    Frontend->>Frontend: Client-side validation
+    Frontend->>API: POST /api/calculate
+    
+    API->>Validator: Validate inputs
+    Validator-->>API: Validation result
+    
+    alt Input Invalid
+        API-->>Frontend: 400 Error
+        Frontend-->>User: Show error message
+    else Input Valid
+        API->>Cache: Check cache for drug
+        Cache-->>API: Cache miss/hit
+        
+        alt Cache Hit (Drug)
+            Cache-->>API: Cached RxCUI
+        else Cache Miss
+            API->>RxNorm: Normalize drug name
+            RxNorm->>Cache: Check cache
+            Cache-->>RxNorm: Miss
+            RxNorm->>RxNormAPI: GET /rxcui?name={drugName}
+            RxNormAPI-->>RxNorm: RxCUI + metadata
+            RxNorm->>Cache: Store result (TTL: 7d)
+            RxNorm-->>API: RxCUI
+        end
+        
+        API->>Cache: Check cache for NDC list
+        Cache-->>API: Cache miss/hit
+        
+        alt Cache Hit (NDC List)
+            Cache-->>API: Cached NDC list
+        else Cache Miss
+            API->>RxNorm: Get NDCs for RxCUI
+            RxNorm->>RxNormAPI: GET /rxcui/{rxcui}/allndcs
+            RxNormAPI-->>RxNorm: NDC list
+            RxNorm->>Cache: Store result (TTL: 24h)
+            RxNorm-->>API: NDC list
+        end
+        
+        par Parallel API Calls
+            API->>FDA: Get package details for each NDC
+            loop For each NDC
+                FDA->>Cache: Check cache for NDC
+                alt Cache Hit
+                    Cache-->>FDA: Cached package details
+                else Cache Miss
+                    FDA->>FDAAPI: GET ?search=product_ndc:{ndc}
+                    FDAAPI-->>FDA: Package details + status
+                    FDA->>Cache: Store result (TTL: 24h)
+                end
+            end
+            FDA->>FDA: Filter inactive NDCs
+            FDA->>FDA: Parse package descriptions
+            FDA-->>API: Active NDCs with package info
+        and
+            API->>Parser: Parse SIG (parallel with NDC fetch)
+            Note over Parser: See SIG parsing flow below
+        end
+        
+        API->>Cache: Check cache for SIG
+        Cache-->>API: Cache miss/hit
+        
+        alt Cache Hit (SIG)
+            Cache-->>API: Cached parsed SIG
+        else Cache Miss
+            API->>Parser: Parse SIG
+            Parser->>Parser: Try regex parser first
+            Parser->>Parser: Calculate confidence score
+            alt Regex Confidence >= 0.8
+                Parser-->>API: Parsed SIG (regex)
+            else Regex Confidence < 0.8
+                Parser->>OpenAI: Parse with AI (fallback)
+                OpenAI->>OpenAIAPI: POST /chat/completions
+                OpenAIAPI-->>OpenAI: Parsed structure
+                OpenAI-->>Parser: Dosage/Frequency/Unit
+                alt AI Fails
+                    Parser-->>API: Error - cannot parse
+                else AI Success
+                    Parser-->>API: Parsed SIG (AI)
+                end
+            end
+            Parser->>Cache: Store result (TTL: 30d)
+        end
+        
+        API->>Calc: Calculate quantity
+        Calc->>Calc: (dosage × frequency) × daysSupply
+        Calc-->>API: Total quantity needed
+        
+        API->>Selector: Select optimal NDC(s)
+        Selector->>Selector: Normalize NDC formats
+        Selector->>Selector: Parse package sizes
+        Selector->>Selector: Match package sizes to quantity
+        Selector->>Selector: Rank by exactness/overfill
+        Selector->>Selector: Generate multi-pack options
+        Selector->>Selector: Calculate overfill/underfill
+        Selector-->>API: Recommended + alternatives
+        
+        API->>API: Format response
+        API->>API: Add warnings/flags
+        API-->>Frontend: JSON response
+        
+        Frontend->>Frontend: Update UI
+        Frontend->>Frontend: Save to history (localStorage)
+        Frontend-->>User: Display results
+

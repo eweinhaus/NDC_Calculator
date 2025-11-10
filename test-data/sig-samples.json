@@ -1,0 +1,161 @@
+[
+  {
+    "sig": "Take 1 tablet by mouth twice daily",
+    "expectedDosage": 1,
+    "expectedFrequency": 2,
+    "expectedUnit": "tablet",
+    "complexity": "simple"
+  },
+  {
+    "sig": "Take 2 tablets by mouth every 12 hours with food",
+    "expectedDosage": 2,
+    "expectedFrequency": 2,
+    "expectedUnit": "tablet",
+    "complexity": "simple"
+  },
+  {
+    "sig": "Take 1 tablet orally once daily",
+    "expectedDosage": 1,
+    "expectedFrequency": 1,
+    "expectedUnit": "tablet",
+    "complexity": "simple"
+  },
+  {
+    "sig": "Take 1 tablet by mouth three times daily",
+    "expectedDosage": 1,
+    "expectedFrequency": 3,
+    "expectedUnit": "tablet",
+    "complexity": "simple"
+  },
+  {
+    "sig": "Take 2 tablets by mouth every 8 hours",
+    "expectedDosage": 2,
+    "expectedFrequency": 3,
+    "expectedUnit": "tablet",
+    "complexity": "simple"
+  },
+  {
+    "sig": "Take 1 tablet twice a day",
+    "expectedDosage": 1,
+    "expectedFrequency": 2,
+    "expectedUnit": "tablet",
+    "complexity": "simple"
+  },
+  {
+    "sig": "Take 1 tablet daily",
+    "expectedDosage": 1,
+    "expectedFrequency": 1,
+    "expectedUnit": "tablet",
+    "complexity": "simple"
+  },
+  {
+    "sig": "Take 2 tablets every morning",
+    "expectedDosage": 2,
+    "expectedFrequency": 1,
+    "expectedUnit": "tablet",
+    "complexity": "simple"
+  },
+  {
+    "sig": "Take 1 capsule by mouth twice daily with meals",
+    "expectedDosage": 1,
+    "expectedFrequency": 2,
+    "expectedUnit": "capsule",
+    "complexity": "simple"
+  },
+  {
+    "sig": "Take 1 tablet at bedtime",
+    "expectedDosage": 1,
+    "expectedFrequency": 1,
+    "expectedUnit": "tablet",
+    "complexity": "simple"
+  },
+  {
+    "sig": "Take 1-2 tablets by mouth as needed for pain",
+    "expectedDosage": 1.5,
+    "expectedFrequency": 0,
+    "expectedUnit": "tablet",
+    "complexity": "complex",
+    "notes": "PRN medication - frequency is 0, dosage is average"
+  },
+  {
+    "sig": "Take 1 tablet by mouth every 6 hours as needed",
+    "expectedDosage": 1,
+    "expectedFrequency": 4,
+    "expectedUnit": "tablet",
+    "complexity": "simple",
+    "notes": "PRN but with frequency specified"
+  },
+  {
+    "sig": "Take 2 tablets by mouth every 12 hours for 7 days",
+    "expectedDosage": 2,
+    "expectedFrequency": 2,
+    "expectedUnit": "tablet",
+    "complexity": "simple"
+  },
+  {
+    "sig": "Take 1 tablet in the morning and 1 tablet in the evening",
+    "expectedDosage": 1,
+    "expectedFrequency": 2,
+    "expectedUnit": "tablet",
+    "complexity": "simple"
+  },
+  {
+    "sig": "Take 1 tablet by mouth four times daily before meals and at bedtime",
+    "expectedDosage": 1,
+    "expectedFrequency": 4,
+    "expectedUnit": "tablet",
+    "complexity": "simple"
+  },
+  {
+    "sig": "Take 1-2 tablets every 4-6 hours as needed for pain, not to exceed 8 tablets per day",
+    "expectedDosage": 1.5,
+    "expectedFrequency": 4,
+    "expectedUnit": "tablet",
+    "complexity": "complex",
+    "notes": "Variable dosage and frequency with maximum limit"
+  },
+  {
+    "sig": "Take 2 tablets by mouth once daily with food",
+    "expectedDosage": 2,
+    "expectedFrequency": 1,
+    "expectedUnit": "tablet",
+    "complexity": "simple"
+  },
+  {
+    "sig": "Take 1 tablet every morning on an empty stomach",
+    "expectedDosage": 1,
+    "expectedFrequency": 1,
+    "expectedUnit": "tablet",
+    "complexity": "simple"
+  },
+  {
+    "sig": "Take 1 tablet by mouth three times daily with meals",
+    "expectedDosage": 1,
+    "expectedFrequency": 3,
+    "expectedUnit": "tablet",
+    "complexity": "simple"
+  },
+  {
+    "sig": "Take 2 tablets twice daily",
+    "expectedDosage": 2,
+    "expectedFrequency": 2,
+    "expectedUnit": "tablet",
+    "complexity": "simple"
+  },
+  {
+    "sig": "Take 1 tablet every 8 hours for 10 days",
+    "expectedDosage": 1,
+    "expectedFrequency": 3,
+    "expectedUnit": "tablet",
+    "complexity": "simple"
+  },
+  {
+    "sig": "Take 1 tablet by mouth as directed",
+    "expectedDosage": 1,
+    "expectedFrequency": 1,
+    "expectedUnit": "tablet",
+    "complexity": "complex",
+    "notes": "Ambiguous - may need AI parsing or user clarification"
+  }
+]
+
