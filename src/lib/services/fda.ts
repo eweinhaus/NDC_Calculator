@@ -93,17 +93,40 @@ function normalizeNdcForApi(ndc: string): string {
  */
 function isActive(expirationDate?: string): boolean {
 	if (!expirationDate) {
+		logger.debug('isActive: No expiration date, assuming active');
 		return true; // Assume active if no expiration date
 	}
 
 	// Parse YYYYMMDD format
-	const year = parseInt(expirationDate.substring(0, 4), 10);
-	const month = parseInt(expirationDate.substring(4, 6), 10);
-	const day = parseInt(expirationDate.substring(6, 8), 10);
-	const expiration = new Date(year, month - 1, day);
-	const now = new Date();
+	try {
+		const year = parseInt(expirationDate.substring(0, 4), 10);
+		const month = parseInt(expirationDate.substring(4, 6), 10);
+		const day = parseInt(expirationDate.substring(6, 8), 10);
+		
+		if (isNaN(year) || isNaN(month) || isNaN(day)) {
+			logger.warn('isActive: Invalid expiration date format', { expirationDate });
+			return true; // Assume active if date is invalid
+		}
 
-	return expiration >= now;
+		const expiration = new Date(year, month - 1, day);
+		const now = new Date();
+		const isActiveResult = expiration >= now;
+
+		logger.debug('isActive: Checking expiration', {
+			expirationDate,
+			parsedDate: expiration.toISOString(),
+			now: now.toISOString(),
+			isActive: isActiveResult,
+		});
+
+		return isActiveResult;
+	} catch (error) {
+		logger.error('isActive: Error parsing expiration date', {
+			expirationDate,
+			error: error instanceof Error ? error.message : String(error),
+		});
+		return true; // Assume active on error
+	}
 }
 
 /**
@@ -154,7 +177,8 @@ async function makeRequest(endpoint: string): Promise<FdaApiResponse> {
 			// Check for API error in response
 			if (data.error) {
 				if (data.error.code === 'NOT_FOUND') {
-					return { results: [] };
+					// Return error object so caller can detect and use fallback
+					return { results: [], error: data.error };
 				}
 				throw new Error(data.error.message || 'FDA API error');
 			}
@@ -171,10 +195,42 @@ async function makeRequest(endpoint: string): Promise<FdaApiResponse> {
 }
 
 /**
+ * Map FDA API package info directly to FdaPackageDetails (when we already have the package info).
+ */
+function mapPackageInfoToDetails(
+	result: FdaPackageResult,
+	packageInfo: { package_ndc: string; description: string }
+): FdaPackageDetails {
+	const expirationDate = result.listing_expiration_date;
+	const active = isActive(expirationDate);
+
+	logger.debug(`mapPackageInfoToDetails: Creating package details`, {
+		packageNdc: packageInfo.package_ndc,
+		productNdc: result.product_ndc,
+		expirationDate,
+		active,
+		description: packageInfo.description,
+	});
+
+	return {
+		product_ndc: result.product_ndc,
+		package_ndc: packageInfo.package_ndc,
+		package_description: packageInfo.description,
+		active: active,
+		manufacturer_name: result.labeler_name || result.openfda?.manufacturer_name?.[0] || 'Unknown',
+		dosage_form: result.dosage_form || 'Unknown',
+		rxcui: result.openfda?.rxcui,
+		strength: result.active_ingredients?.[0]?.strength
+	};
+}
+
+/**
  * Map FDA API result to FdaPackageDetails.
+ * Used when we need to find a specific package by NDC.
  */
 function mapToPackageDetails(result: FdaPackageResult, packageNdc: string): FdaPackageDetails | null {
 	if (!result.packaging || result.packaging.length === 0) {
+		logger.debug(`mapToPackageDetails: No packaging array for packageNdc: ${packageNdc}`);
 		return null;
 	}
 
@@ -182,23 +238,28 @@ function mapToPackageDetails(result: FdaPackageResult, packageNdc: string): FdaP
 	const packageInfo = result.packaging.find((pkg) => {
 		const normalizedPkg = normalizeNdcForApi(pkg.package_ndc);
 		const normalizedTarget = normalizeNdcForApi(packageNdc);
-		return normalizedPkg === normalizedTarget;
+		const matches = normalizedPkg === normalizedTarget;
+		if (!matches) {
+			logger.debug(`mapToPackageDetails: NDC mismatch`, {
+				packageNdc,
+				pkgNdc: pkg.package_ndc,
+				normalizedPkg,
+				normalizedTarget,
+			});
+		}
+		return matches;
 	});
 
 	if (!packageInfo) {
+		logger.warn(`mapToPackageDetails: Package not found in packaging array`, {
+			packageNdc,
+			productNdc: result.product_ndc,
+			availablePackages: result.packaging.map((p) => p.package_ndc),
+		});
 		return null;
 	}
 
-	return {
-		product_ndc: result.product_ndc,
-		package_ndc: packageInfo.package_ndc,
-		package_description: packageInfo.description,
-		active: isActive(result.listing_expiration_date),
-		manufacturer_name: result.labeler_name || result.openfda?.manufacturer_name?.[0] || 'Unknown',
-		dosage_form: result.dosage_form || 'Unknown',
-		rxcui: result.openfda?.rxcui,
-		strength: result.active_ingredients?.[0]?.strength
-	};
+	return mapPackageInfoToDetails(result, packageInfo);
 }
 
 /**
@@ -307,8 +368,27 @@ export async function getAllPackages(productNdc: string): Promise<FdaPackageDeta
 }
 
 /**
+ * Get generic name from RxCUI using RxNorm API.
+ * This is used as a fallback when FDA openfda.rxcui search fails.
+ */
+async function getGenericNameFromRxcui(rxcui: string): Promise<string | null> {
+	try {
+		const response = await fetch(`https://rxnav.nlm.nih.gov/REST/rxcui/${rxcui}/properties.json`);
+		if (!response.ok) {
+			return null;
+		}
+		const data = await response.json();
+		return data.properties?.name || null;
+	} catch (error) {
+		logger.warn(`Error getting generic name for RxCUI ${rxcui}`, error as Error);
+		return null;
+	}
+}
+
+/**
  * Get all packages for a given RxCUI.
  * Uses FDA API search by openfda.rxcui to find all NDCs associated with the RxCUI.
+ * Falls back to generic_name search if openfda.rxcui search fails.
  * @param rxcui - RxCUI identifier
  * @returns Array of package details
  */
@@ -323,12 +403,69 @@ export async function getPackagesByRxcui(rxcui: string): Promise<FdaPackageDetai
 			return cached;
 		}
 
-		// Make API call
+		// Make API call - try openfda.rxcui first
 		try {
-			const response = await makeRequest(`?search=openfda.rxcui:${rxcui}&limit=100`);
+			const endpoint = `?search=openfda.rxcui:${rxcui}&limit=100`;
+			process.stderr.write(`🌐 [FDA] Fetching packages for RxCUI: ${rxcui}, endpoint: ${endpoint}\n`);
+			console.error(`🌐 [FDA] Fetching packages for RxCUI: ${rxcui}`, { endpoint });
+			logger.info(`Fetching packages for RxCUI: ${rxcui}`, { endpoint });
+			let response = await makeRequest(endpoint);
+
+			process.stderr.write(`📥 [FDA] API response for RxCUI ${rxcui}: results=${response.results?.length || 0}, hasError=${!!response.error}\n`);
+			console.error(`📥 [FDA] API response for RxCUI ${rxcui}:`, {
+				resultsCount: response.results?.length || 0,
+				meta: response.meta,
+				hasError: !!response.error,
+				error: response.error,
+			});
+			logger.info(`FDA API response for RxCUI ${rxcui}:`, {
+				resultsCount: response.results?.length || 0,
+				meta: response.meta,
+			});
+
+			// If no results (either empty or error), try fallback to generic_name search
+			if (!response.results || response.results.length === 0) {
+				process.stderr.write(`⚠️ [FDA] openfda.rxcui search returned no results, trying generic_name fallback for RxCUI: ${rxcui}\n`);
+				console.error(`⚠️ [FDA] openfda.rxcui search returned no results, trying generic_name fallback for RxCUI: ${rxcui}`, {
+					hasError: !!response.error,
+					error: response.error,
+				});
+				logger.warn(`openfda.rxcui search returned no results, trying generic_name fallback for RxCUI: ${rxcui}`);
+				
+				// Get generic name from RxNorm
+				const genericName = await getGenericNameFromRxcui(rxcui);
+				process.stderr.write(`🔄 [FDA] Generic name lookup result: ${genericName || 'NOT FOUND'}\n`);
+				if (genericName) {
+					process.stderr.write(`🔄 [FDA] Using generic_name fallback: ${genericName}\n`);
+					console.error(`🔄 [FDA] Using generic_name fallback: ${genericName}`);
+					const fallbackEndpoint = `?search=generic_name:${encodeURIComponent(genericName.toUpperCase())}&limit=100`;
+					response = await makeRequest(fallbackEndpoint);
+					
+					process.stderr.write(`📥 [FDA] Fallback API response: results=${response.results?.length || 0}\n`);
+					console.error(`📥 [FDA] Fallback API response:`, {
+						resultsCount: response.results?.length || 0,
+						meta: response.meta,
+						hasError: !!response.error,
+						error: response.error,
+					});
+				} else {
+					process.stderr.write(`⚠️ [FDA] Could not get generic name for RxCUI ${rxcui}\n`);
+					console.error(`⚠️ [FDA] Could not get generic name for RxCUI ${rxcui}`);
+				}
+			}
 
 			if (!response.results || response.results.length === 0) {
-				logger.info(`No packages found for RxCUI: ${rxcui}`);
+				process.stderr.write(`⚠️ [FDA] No packages found for RxCUI: ${rxcui} after all attempts\n`);
+				console.error(`⚠️ [FDA] No packages found for RxCUI: ${rxcui}`, {
+					responseMeta: response.meta,
+					hasError: !!response.error,
+					error: response.error,
+				});
+				logger.warn(`No packages found for RxCUI: ${rxcui}`, {
+					responseMeta: response.meta,
+					hasError: !!response.error,
+					error: response.error,
+				});
 				// Cache empty array
 				await cache.set(cacheKey, [], FDA_PACKAGE_TTL);
 				return [];
@@ -336,18 +473,69 @@ export async function getPackagesByRxcui(rxcui: string): Promise<FdaPackageDetai
 
 			// Map all packages from all results
 			const packages: FdaPackageDetails[] = [];
+			let totalPackagingEntries = 0;
+			let skippedNoPackaging = 0;
+			let skippedMappingFailed = 0;
+
 			for (const result of response.results) {
-				if (result.packaging) {
-					for (const pkg of result.packaging) {
-						const packageDetails = mapToPackageDetails(result, pkg.package_ndc);
-						if (packageDetails) {
-							packages.push(packageDetails);
-						}
+				logger.debug(`Processing result for product_ndc: ${result.product_ndc}`, {
+					hasPackaging: !!result.packaging,
+					packagingCount: result.packaging?.length || 0,
+					expirationDate: result.listing_expiration_date,
+					dosageForm: result.dosage_form,
+					finished: result.finished,
+				});
+
+				if (!result.packaging || result.packaging.length === 0) {
+					skippedNoPackaging++;
+					logger.debug(`Skipping result - no packaging array for product_ndc: ${result.product_ndc}`);
+					continue;
+				}
+
+				totalPackagingEntries += result.packaging.length;
+
+				for (const pkg of result.packaging) {
+					try {
+						const packageDetails = mapPackageInfoToDetails(result, {
+							package_ndc: pkg.package_ndc,
+							description: pkg.description,
+						});
+						logger.debug(`Mapped package: ${pkg.package_ndc}`, {
+							active: packageDetails.active,
+							description: packageDetails.package_description,
+							expirationDate: result.listing_expiration_date,
+						});
+						packages.push(packageDetails);
+					} catch (error) {
+						skippedMappingFailed++;
+						logger.warn(`Failed to map package: ${pkg.package_ndc}`, {
+							packageNdc: pkg.package_ndc,
+							productNdc: result.product_ndc,
+							description: pkg.description,
+							error: error instanceof Error ? error.message : String(error),
+						});
 					}
 				}
 			}
 
-			logger.info(`Found ${packages.length} packages for RxCUI: ${rxcui}`);
+			console.log(`✅ [FDA] Package mapping summary for RxCUI ${rxcui}:`, {
+				totalResults: response.results.length,
+				totalPackagingEntries,
+				successfullyMapped: packages.length,
+				skippedNoPackaging,
+				skippedMappingFailed,
+				activeCount: packages.filter((p) => p.active).length,
+				inactiveCount: packages.filter((p) => !p.active).length,
+			});
+			logger.info(`Package mapping summary for RxCUI ${rxcui}:`, {
+				totalResults: response.results.length,
+				totalPackagingEntries,
+				successfullyMapped: packages.length,
+				skippedNoPackaging,
+				skippedMappingFailed,
+				activeCount: packages.filter((p) => p.active).length,
+				inactiveCount: packages.filter((p) => !p.active).length,
+			});
 
 			// Cache result
 			await cache.set(cacheKey, packages, FDA_PACKAGE_TTL);

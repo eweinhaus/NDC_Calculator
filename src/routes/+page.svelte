@@ -67,17 +67,81 @@
 			};
 
 			loadingStage = 'drug';
-			const response = await fetch('/api/calculate', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify(requestBody),
-			});
+			let response: Response;
+			try {
+				response = await fetch('/api/calculate', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify(requestBody),
+				});
+			} catch (fetchError) {
+				// Network error - server not reachable
+				console.error('Fetch error:', fetchError);
+				error = {
+					code: 'NETWORK_ERROR',
+					message: 'Could not connect to the server. Please make sure the development server is running.',
+				};
+				isLoading = false;
+				loadingStage = null;
+				return;
+			}
 
-			const data: CalculationResponse = await response.json();
+			// Check if response is ok before parsing JSON
+			if (!response.ok) {
+				// Try to parse error response
+				let errorData: CalculationResponse | null = null;
+				try {
+					const text = await response.text();
+					if (text) {
+						errorData = JSON.parse(text) as CalculationResponse;
+					}
+				} catch (parseError) {
+					// Response is not valid JSON
+					console.error('Error parsing response:', parseError);
+				}
 
-			if (!response.ok || !data.success) {
+				if (errorData?.error) {
+					error = errorData.error;
+					// Extract suggestions if available
+					if (errorData.error.details && typeof errorData.error.details === 'object') {
+						const details = errorData.error.details as Record<string, unknown>;
+						if (Array.isArray(details.suggestions)) {
+							suggestions = details.suggestions as string[];
+						}
+					}
+				} else {
+					error = {
+						code: 'API_ERROR',
+						message: `Server error (${response.status}): ${response.statusText || 'Unknown error'}`,
+					};
+				}
+				isLoading = false;
+				loadingStage = null;
+				return;
+			}
+
+			// Parse JSON response
+			let data: CalculationResponse;
+			try {
+				const text = await response.text();
+				if (!text) {
+					throw new Error('Empty response from server');
+				}
+				data = JSON.parse(text) as CalculationResponse;
+			} catch (parseError) {
+				console.error('Error parsing JSON response:', parseError);
+				error = {
+					code: 'API_ERROR',
+					message: 'Invalid response from server. Please try again.',
+				};
+				isLoading = false;
+				loadingStage = null;
+				return;
+			}
+
+			if (!data.success) {
 				// Handle error response
 				if (data.error) {
 					error = data.error;
@@ -109,10 +173,12 @@
 				};
 			}
 		} catch (err) {
-			// Network or other error
+			// Unexpected error
+			console.error('Unexpected error in calculate:', err);
+			const errorMessage = err instanceof Error ? err.message : 'Unknown error';
 			error = {
 				code: 'NETWORK_ERROR',
-				message: 'Network error. Please check your connection and try again.',
+				message: `An unexpected error occurred: ${errorMessage}. Please check your connection and try again.`,
 			};
 		} finally {
 			isLoading = false;
@@ -149,6 +215,8 @@
 		daysSupply = '';
 		touched = {};
 		errors = {};
+		// Scroll to top to show the form
+		window.scrollTo({ top: 0, behavior: 'smooth' });
 		// Focus first input
 		setTimeout(() => {
 			const firstInput = document.getElementById('drugInput');
@@ -290,7 +358,7 @@
 						on:click={handleCalculateAgain}
 						class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 text-sm md:text-base min-h-[44px]"
 					>
-						Calculate Again
+						Calculate Another
 					</button>
 				</div>
 				<ResultsDisplay results={results} />
