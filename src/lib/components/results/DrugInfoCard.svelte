@@ -4,25 +4,30 @@
 	export let drug: DrugInfo;
 </script>
 
-<div class="bg-white rounded-lg shadow p-4" aria-label="Drug information">
-	<h3 class="text-xl font-semibold mb-3 text-gray-900">{drug.name}</h3>
-	<div class="space-y-2">
+<div class="bg-white rounded-xl shadow-md border border-gray-200 p-5" aria-label="Drug information">
+	<h3 class="text-2xl font-bold mb-4 text-gray-900 flex items-center gap-2">
+		<svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+		</svg>
+		{drug.name}
+	</h3>
+	<div class="space-y-2.5">
 		{#if drug.rxcui}
-			<div class="flex items-start">
-				<span class="text-sm font-medium text-gray-600 mr-2">RxCUI:</span>
-				<span class="text-sm text-gray-900">{drug.rxcui}</span>
+			<div class="flex items-center justify-between py-1.5 border-b border-gray-200">
+				<span class="text-sm font-semibold text-gray-700">RxCUI:</span>
+				<span class="text-sm font-mono text-gray-900 bg-gray-50 px-2 py-1 rounded">{drug.rxcui}</span>
 			</div>
 		{/if}
 		{#if drug.strength}
-			<div class="flex items-start">
-				<span class="text-sm font-medium text-gray-600 mr-2">Strength:</span>
-				<span class="text-sm text-gray-900">{drug.strength}</span>
+			<div class="flex items-center justify-between py-1.5 border-b border-gray-200">
+				<span class="text-sm font-semibold text-gray-700">Strength:</span>
+				<span class="text-sm font-medium text-gray-900">{drug.strength}</span>
 			</div>
 		{/if}
 		{#if drug.dosageForm}
-			<div class="flex items-start">
-				<span class="text-sm font-medium text-gray-600 mr-2">Dosage Form:</span>
-				<span class="text-sm text-gray-900">{drug.dosageForm}</span>
+			<div class="flex items-center justify-between py-1.5">
+				<span class="text-sm font-semibold text-gray-700">Dosage Form:</span>
+				<span class="text-sm font-medium text-gray-900">{drug.dosageForm}</span>
 			</div>
 		{/if}
 	</div>

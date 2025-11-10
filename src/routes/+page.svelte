@@ -6,6 +6,8 @@
 	import SkeletonLoader from '../lib/components/SkeletonLoader.svelte';
 	import Toast from '../lib/components/Toast.svelte';
 	import { debounce } from '../lib/utils/debounce.js';
+	import { downloadResultsAsPdf } from '../lib/utils/pdfGenerator.js';
+	import { showToast } from '../lib/stores/toast.js';
 
 	// Form state
 	let drugInput = '';
@@ -226,6 +228,18 @@
 		}, 100);
 	}
 
+	function handleDownloadPdf() {
+		if (results) {
+			try {
+				downloadResultsAsPdf(results);
+				showToast('PDF downloaded successfully', 'success');
+			} catch (error) {
+				console.error('PDF download error:', error);
+				showToast('Failed to download PDF. Please try again.', 'error');
+			}
+		}
+	}
+
 	// Scroll to top when results appear
 	$: if (results) {
 		setTimeout(() => {
@@ -238,99 +252,108 @@
 	<title>NDC Packaging & Quantity Calculator</title>
 </svelte:head>
 
-<div class="container mx-auto max-w-6xl p-4 md:p-6 lg:p-8">
-	<header class="mb-8">
-		<h1 class="text-3xl font-bold text-center mb-2">NDC Packaging & Quantity Calculator</h1>
-		<p class="text-center text-gray-600 text-sm md:text-base">
+<div class="container mx-auto max-w-7xl p-4 md:p-6 lg:p-8">
+	<header class="mb-8 text-center">
+		<div class="inline-flex items-center justify-center mb-4">
+			<svg class="w-10 h-10 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+			</svg>
+			<h1 class="text-4xl md:text-5xl font-extrabold text-gray-900">
+				NDC Calculator
+			</h1>
+		</div>
+		<p class="text-gray-600 text-base md:text-lg max-w-2xl mx-auto">
 			Calculate optimal NDC selections and quantities from prescription instructions
 		</p>
 	</header>
 
 	<main id="main-content">
 		{#if !results && !error}
-			<form on:submit|preventDefault={handleSubmit} class="space-y-4 md:space-y-6 max-w-2xl mx-auto">
-				<div class="form-group">
-					<label for="drugInput" class="block mb-2 font-medium text-sm md:text-base">
-						Drug Name or NDC
-						<span class="text-red-500" aria-label="required">*</span>
-					</label>
-					<input
-						id="drugInput"
-						type="text"
-						bind:value={drugInput}
-						on:blur={() => handleBlur('drugInput')}
-						placeholder="e.g., Lisinopril or 00002-3227-30"
-						class="w-full px-3 py-2 md:py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 {shouldShowError('drugInput') ? 'border-red-500' : ''}"
-						aria-invalid={shouldShowError('drugInput') ? 'true' : 'false'}
-						aria-describedby={shouldShowError('drugInput') ? 'drugInput-error' : undefined}
-						aria-required="true"
-						required
-					/>
-					{#if shouldShowError('drugInput')}
-						<span id="drugInput-error" class="block text-red-500 text-sm mt-1" role="alert">
-							{errors.drugInput}
-						</span>
-					{/if}
-				</div>
+			<div class="max-w-3xl mx-auto">
+				<form on:submit|preventDefault={handleSubmit} class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 md:p-8 space-y-5">
+					<div class="form-group">
+						<label for="drugInput" class="block mb-2 font-semibold text-gray-700 text-sm md:text-base">
+							Drug Name or NDC
+							<span class="text-red-500" aria-label="required">*</span>
+						</label>
+						<input
+							id="drugInput"
+							type="text"
+							bind:value={drugInput}
+							on:blur={() => handleBlur('drugInput')}
+							placeholder="e.g., Lisinopril or 00002-3227-30"
+							class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors {shouldShowError('drugInput') ? 'border-red-500 focus:ring-red-500' : ''}"
+							aria-invalid={shouldShowError('drugInput') ? 'true' : 'false'}
+							aria-describedby={shouldShowError('drugInput') ? 'drugInput-error' : undefined}
+							aria-required="true"
+							required
+						/>
+						{#if shouldShowError('drugInput')}
+							<span id="drugInput-error" class="block text-red-600 text-sm mt-1.5 font-medium" role="alert">
+								{errors.drugInput}
+							</span>
+						{/if}
+					</div>
 
-				<div class="form-group">
-					<label for="sig" class="block mb-2 font-medium text-sm md:text-base">
-						SIG (Prescription Instructions)
-						<span class="text-red-500" aria-label="required">*</span>
-					</label>
-					<textarea
-						id="sig"
-						bind:value={sig}
-						on:blur={() => handleBlur('sig')}
-						placeholder="e.g., Take 1 tablet by mouth twice daily"
-						rows="3"
-						class="w-full px-3 py-2 md:py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 {shouldShowError('sig') ? 'border-red-500' : ''}"
-						aria-invalid={shouldShowError('sig') ? 'true' : 'false'}
-						aria-describedby={shouldShowError('sig') ? 'sig-error' : undefined}
-						aria-required="true"
-						required
-					></textarea>
-					{#if shouldShowError('sig')}
-						<span id="sig-error" class="block text-red-500 text-sm mt-1" role="alert">
-							{errors.sig}
-						</span>
-					{/if}
-				</div>
+					<div class="form-group">
+						<label for="sig" class="block mb-2 font-semibold text-gray-700 text-sm md:text-base">
+							SIG (Prescription Instructions)
+							<span class="text-red-500" aria-label="required">*</span>
+						</label>
+						<textarea
+							id="sig"
+							bind:value={sig}
+							on:blur={() => handleBlur('sig')}
+							placeholder="e.g., Take 1 tablet by mouth twice daily"
+							rows="3"
+							class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none {shouldShowError('sig') ? 'border-red-500 focus:ring-red-500' : ''}"
+							aria-invalid={shouldShowError('sig') ? 'true' : 'false'}
+							aria-describedby={shouldShowError('sig') ? 'sig-error' : undefined}
+							aria-required="true"
+							required
+						></textarea>
+						{#if shouldShowError('sig')}
+							<span id="sig-error" class="block text-red-600 text-sm mt-1.5 font-medium" role="alert">
+								{errors.sig}
+							</span>
+						{/if}
+					</div>
 
-				<div class="form-group">
-					<label for="daysSupply" class="block mb-2 font-medium text-sm md:text-base">
-						Days' Supply
-						<span class="text-red-500" aria-label="required">*</span>
-					</label>
-					<input
-						id="daysSupply"
-						type="number"
-						bind:value={daysSupply}
-						on:blur={() => handleBlur('daysSupply')}
-						min="1"
-						max="365"
-						placeholder="e.g., 30"
-						class="w-full px-3 py-2 md:py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 {shouldShowError('daysSupply') ? 'border-red-500' : ''}"
-						aria-invalid={shouldShowError('daysSupply') ? 'true' : 'false'}
-						aria-describedby={shouldShowError('daysSupply') ? 'daysSupply-error' : undefined}
-						aria-required="true"
-						required
-					/>
-					{#if shouldShowError('daysSupply')}
-						<span id="daysSupply-error" class="block text-red-500 text-sm mt-1" role="alert">
-							{errors.daysSupply}
-						</span>
-					{/if}
-				</div>
+					<div class="form-group">
+						<label for="daysSupply" class="block mb-2 font-semibold text-gray-700 text-sm md:text-base">
+							Days' Supply
+							<span class="text-red-500" aria-label="required">*</span>
+						</label>
+						<input
+							id="daysSupply"
+							type="number"
+							bind:value={daysSupply}
+							on:blur={() => handleBlur('daysSupply')}
+							min="1"
+							max="365"
+							placeholder="e.g., 30"
+							class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors {shouldShowError('daysSupply') ? 'border-red-500 focus:ring-red-500' : ''}"
+							aria-invalid={shouldShowError('daysSupply') ? 'true' : 'false'}
+							aria-describedby={shouldShowError('daysSupply') ? 'daysSupply-error' : undefined}
+							aria-required="true"
+							required
+						/>
+						{#if shouldShowError('daysSupply')}
+							<span id="daysSupply-error" class="block text-red-600 text-sm mt-1.5 font-medium" role="alert">
+								{errors.daysSupply}
+							</span>
+						{/if}
+					</div>
 
-				<button
-					type="submit"
-					disabled={!isValid || isLoading}
-					class="w-full md:w-auto md:min-w-[120px] px-4 py-2 md:py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px] text-sm md:text-base"
-				>
-					{isLoading ? 'Calculating...' : 'Calculate'}
-				</button>
-			</form>
+					<button
+						type="submit"
+						disabled={!isValid || isLoading}
+						class="w-full md:w-auto md:min-w-[140px] px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-md hover:shadow-lg min-h-[48px] text-base"
+					>
+						{isLoading ? 'Calculating...' : 'Calculate'}
+					</button>
+				</form>
+			</div>
 		{/if}
 
 		{#if isLoading}
@@ -351,17 +374,40 @@
 		{/if}
 
 		{#if results && !isLoading}
-			<div class="mt-8" transition:fade>
-				<div class="mb-4 flex justify-end">
+			<div class="mt-6" transition:fade>
+				<div class="mb-5 flex justify-end gap-3">
+					<button
+						type="button"
+						on:click={handleDownloadPdf}
+						class="px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm md:text-base min-h-[44px] flex items-center gap-2 shadow-md hover:shadow-lg"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							class="h-5 w-5"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+							/>
+						</svg>
+						Download Results
+					</button>
 					<button
 						type="button"
 						on:click={handleCalculateAgain}
-						class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 text-sm md:text-base min-h-[44px]"
+						class="px-5 py-2.5 bg-gray-600 text-white font-semibold rounded-xl hover:bg-gray-700 transition-all focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm md:text-base min-h-[44px] shadow-md hover:shadow-lg"
 					>
 						Calculate Another
 					</button>
 				</div>
-				<ResultsDisplay results={results} />
+				<div class="max-w-7xl mx-auto">
+					<ResultsDisplay results={results} />
+				</div>
 			</div>
 		{/if}
 	</main>

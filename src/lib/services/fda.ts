@@ -99,17 +99,17 @@ function isActive(expirationDate?: string): boolean {
 
 	// Parse YYYYMMDD format
 	try {
-		const year = parseInt(expirationDate.substring(0, 4), 10);
-		const month = parseInt(expirationDate.substring(4, 6), 10);
-		const day = parseInt(expirationDate.substring(6, 8), 10);
+	const year = parseInt(expirationDate.substring(0, 4), 10);
+	const month = parseInt(expirationDate.substring(4, 6), 10);
+	const day = parseInt(expirationDate.substring(6, 8), 10);
 		
 		if (isNaN(year) || isNaN(month) || isNaN(day)) {
 			logger.warn('isActive: Invalid expiration date format', { expirationDate });
 			return true; // Assume active if date is invalid
 		}
 
-		const expiration = new Date(year, month - 1, day);
-		const now = new Date();
+	const expiration = new Date(year, month - 1, day);
+	const now = new Date();
 		const isActiveResult = expiration >= now;
 
 		logger.debug('isActive: Checking expiration', {
@@ -494,7 +494,7 @@ export async function getPackagesByRxcui(rxcui: string): Promise<FdaPackageDetai
 
 				totalPackagingEntries += result.packaging.length;
 
-				for (const pkg of result.packaging) {
+					for (const pkg of result.packaging) {
 					try {
 						const packageDetails = mapPackageInfoToDetails(result, {
 							package_ndc: pkg.package_ndc,
@@ -505,7 +505,7 @@ export async function getPackagesByRxcui(rxcui: string): Promise<FdaPackageDetai
 							description: packageDetails.package_description,
 							expirationDate: result.listing_expiration_date,
 						});
-						packages.push(packageDetails);
+							packages.push(packageDetails);
 					} catch (error) {
 						skippedMappingFailed++;
 						logger.warn(`Failed to map package: ${pkg.package_ndc}`, {

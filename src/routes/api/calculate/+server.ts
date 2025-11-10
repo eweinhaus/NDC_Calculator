@@ -141,24 +141,24 @@ export const POST: RequestHandler = async ({ request }) => {
 		let parseFailures = 0;
 
 		for (const pkg of fdaPackages) {
-			// Parse package description to get package size
-			const parsed = parsePackageDescription(pkg.package_description);
-			if (!parsed) {
+				// Parse package description to get package size
+				const parsed = parsePackageDescription(pkg.package_description);
+				if (!parsed) {
 				logger.warn(`Could not parse package description: ${pkg.package_description}`, {
 					packageNdc: pkg.package_ndc,
 					productNdc: pkg.product_ndc,
 				});
 				parseFailures++;
 				continue;
-			}
+				}
 
 			ndcList.push({
-				ndc: pkg.package_ndc,
-				packageSize: parsed.quantity,
-				packageDescription: pkg.package_description,
-				manufacturer: pkg.manufacturer_name,
-				dosageForm: pkg.dosage_form,
-				active: pkg.active,
+					ndc: pkg.package_ndc,
+					packageSize: parsed.quantity,
+					packageDescription: pkg.package_description,
+					manufacturer: pkg.manufacturer_name,
+					dosageForm: pkg.dosage_form,
+					active: pkg.active,
 			});
 		}
 

@@ -55,41 +55,42 @@
 	}
 </script>
 
-<div class="space-y-6" aria-live="polite" aria-atomic="true">
+<div class="space-y-4" aria-live="polite" aria-atomic="true">
 	<a id="main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-blue-600 focus:text-white">
 		Skip to main content
 	</a>
-	<div class="flex justify-end">
-		<button
-			type="button"
-			on:click={handleCopyAll}
-			disabled={isCopying}
-			class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 text-sm"
-			aria-label="Copy all results to clipboard"
-		>
-			{isCopying ? 'Copying...' : 'Copy Results'}
-		</button>
+	
+	<!-- Two-column layout for main results -->
+	<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+		<!-- Left Column -->
+		<div class="space-y-4">
+			<section aria-labelledby="drug-info-heading">
+				<h2 id="drug-info-heading" class="sr-only">Drug Information</h2>
+				<DrugInfoCard drug={results.drug} />
+			</section>
+
+			<section aria-labelledby="quantity-heading">
+				<h2 id="quantity-heading" class="sr-only">Quantity Calculation</h2>
+				<QuantityBreakdown quantity={results.quantity} />
+			</section>
+		</div>
+
+		<!-- Right Column -->
+		<div class="space-y-4">
+			<section aria-labelledby="recommended-heading">
+				<h2 id="recommended-heading" class="sr-only">Recommended NDC</h2>
+				<RecommendedNdc ndc={results.recommendedNdc} />
+			</section>
+		</div>
 	</div>
 
-	<section aria-labelledby="drug-info-heading">
-		<h2 id="drug-info-heading" class="sr-only">Drug Information</h2>
-		<DrugInfoCard drug={results.drug} />
-	</section>
-
-	<section aria-labelledby="quantity-heading">
-		<h2 id="quantity-heading" class="sr-only">Quantity Calculation</h2>
-		<QuantityBreakdown quantity={results.quantity} />
-	</section>
-
-	<section aria-labelledby="recommended-heading">
-		<h2 id="recommended-heading" class="sr-only">Recommended NDC</h2>
-		<RecommendedNdc ndc={results.recommendedNdc} />
-	</section>
-
+	<!-- Full-width sections below -->
 	{#if results.alternatives && results.alternatives.length > 0}
 		<section aria-labelledby="alternatives-heading">
 			<h2 id="alternatives-heading" class="sr-only">Alternative NDCs</h2>
-			<AlternativeNdcs alternatives={results.alternatives} />
+			{#key results.drug.name}
+				<AlternativeNdcs alternatives={results.alternatives} />
+			{/key}
 		</section>
 	{/if}
 
