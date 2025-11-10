@@ -20,7 +20,7 @@
 </script>
 
 <div
-	class="bg-blue-50 border-2 border-blue-400 rounded-xl shadow-lg p-5"
+	class="bg-blue-50 border-2 border-blue-400 rounded-xl shadow-lg p-5 h-full"
 	aria-label="Recommended NDC"
 >
 	<div class="flex items-start justify-between mb-4">

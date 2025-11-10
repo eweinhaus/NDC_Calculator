@@ -75,13 +75,13 @@
 			</section>
 		</div>
 
-		<!-- Right Column -->
-		<div class="space-y-4">
-			<section aria-labelledby="recommended-heading">
-				<h2 id="recommended-heading" class="sr-only">Recommended NDC</h2>
-				<RecommendedNdc ndc={results.recommendedNdc} />
-			</section>
-		</div>
+	<!-- Right Column -->
+	<div class="flex flex-col">
+		<section aria-labelledby="recommended-heading" class="flex-1">
+			<h2 id="recommended-heading" class="sr-only">Recommended NDC</h2>
+			<RecommendedNdc ndc={results.recommendedNdc} />
+		</section>
+	</div>
 	</div>
 
 	<!-- Full-width sections below -->
