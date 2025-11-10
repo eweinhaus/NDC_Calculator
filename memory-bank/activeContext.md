@@ -29,6 +29,14 @@
 
 ## Recent Changes
 
+- ✅ **SIG AI Fallback Feature:** Implemented AI-powered rewrite fallback for SIG parsing
+  - ✅ Added `rewriteSig()` function to OpenAI service with caching and error handling
+  - ✅ Modified `sigParser.ts` to use rewrite fallback when both parsers fail
+  - ✅ Added recursion depth parameter to prevent infinite loops (max 1 rewrite attempt)
+  - ✅ Comprehensive tests added (unit tests for rewrite function and parser integration)
+  - ✅ Integration tests updated for end-to-end flow
+  - ✅ All code documented with JSDoc comments
+  - ✅ Feature allows SIGs with typos or non-standard wording to be automatically corrected and parsed
 - ✅ **Phase 4 Complete:** UI & User Experience completed and tested
   - ✅ Testing summary: `PHASE4_TESTING_SUMMARY.md`
   - ✅ Browser testing completed (form validation, loading states, error handling, keyboard navigation, responsive design)

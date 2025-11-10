@@ -6,7 +6,7 @@
 	import SkeletonLoader from '../lib/components/SkeletonLoader.svelte';
 	import Toast from '../lib/components/Toast.svelte';
 	import { debounce } from '../lib/utils/debounce.js';
-	import { downloadResultsAsPdf } from '../lib/utils/pdfGenerator.js';
+	import { openPdfInNewTab } from '../lib/utils/pdfGenerator.js';
 	import { showToast } from '../lib/stores/toast.js';
 
 	// Form state
@@ -198,6 +198,12 @@
 	}
 
 	function handleRetry() {
+		// If SIG parse failed, reset to fresh home page instead of retrying
+		if (error?.code === 'SIG_PARSE_FAILED') {
+			handleCalculateAgain();
+			return;
+		}
+		// For other errors, retry the calculation
 		calculate();
 	}
 
@@ -212,6 +218,7 @@
 	function handleCalculateAgain() {
 		results = null;
 		error = null;
+		suggestions = [];
 		drugInput = '';
 		sig = '';
 		daysSupply = '';
@@ -228,14 +235,15 @@
 		}, 100);
 	}
 
-	function handleDownloadPdf() {
+	function handleOpenPdfInNewTab() {
 		if (results) {
 			try {
-				downloadResultsAsPdf(results);
-				showToast('PDF downloaded successfully', 'success');
+				openPdfInNewTab(results);
+				showToast('PDF opened in new tab', 'success');
 			} catch (error) {
-				console.error('PDF download error:', error);
-				showToast('Failed to download PDF. Please try again.', 'error');
+				console.error('PDF open error:', error);
+				const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+				showToast(`Failed to open PDF: ${errorMsg}`, 'error');
 			}
 		}
 	}
@@ -375,11 +383,12 @@
 
 		{#if results && !isLoading}
 			<div class="mt-6" transition:fade>
-				<div class="mb-5 flex justify-end gap-3">
+				<div class="mb-5 flex flex-wrap justify-end gap-3">
 					<button
 						type="button"
-						on:click={handleDownloadPdf}
-						class="px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm md:text-base min-h-[44px] flex items-center gap-2 shadow-md hover:shadow-lg"
+						on:click={handleOpenPdfInNewTab}
+						class="px-5 py-2.5 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-all focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm md:text-base min-h-[44px] flex items-center gap-2 shadow-md hover:shadow-lg"
+						title="Open PDF in a new tab"
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -392,10 +401,10 @@
 								stroke-linecap="round"
 								stroke-linejoin="round"
 								stroke-width="2"
-								d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+								d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
 							/>
 						</svg>
-						Download Results
+						View PDF
 					</button>
 					<button
 						type="button"

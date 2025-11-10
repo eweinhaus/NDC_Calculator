@@ -6,6 +6,7 @@
 
 import { parse as regexParse } from './regexSigParser';
 import { parse as openaiParse } from './openaiSigParser';
+import { rewriteSig } from '../services/openai';
 import { cache } from '../services/cache';
 import { sigParseKey } from '../constants/cacheKeys';
 import { SIG_PARSE_TTL } from '../constants/cacheTtl';
@@ -54,11 +55,13 @@ function validateParsedSig(parsed: ParsedSig | null): parsed is ParsedSig {
 
 /**
  * Parses SIG text using regex (primary) and OpenAI (fallback) parsers.
+ * If both parsers fail, attempts to rewrite the SIG using AI and retries parsing.
  * Results are cached for 30 days.
  * @param sig - Prescription instruction text
+ * @param recursionDepth - Internal parameter to prevent infinite recursion (max 1 rewrite attempt)
  * @returns Parsed SIG or null if parsing fails
  */
-export async function parse(sig: string): Promise<ParsedSig | null> {
+export async function parse(sig: string, recursionDepth: number = 0): Promise<ParsedSig | null> {
 	if (!sig || typeof sig !== 'string') {
 		return null;
 	}
@@ -134,7 +137,41 @@ export async function parse(sig: string): Promise<ParsedSig | null> {
 		}
 	}
 
-	// Both parsers failed or returned invalid results
+	// Both parsers failed - try rewrite fallback (only on first attempt)
+	if (recursionDepth === 0) {
+		try {
+			logger.debug(`Attempting SIG rewrite fallback: ${sig.substring(0, 50)}...`);
+			const rewrittenSig = await rewriteSig(sig);
+			if (rewrittenSig && rewrittenSig.trim() !== sig.trim()) {
+				logger.info(`SIG rewritten successfully: "${sig}" -> "${rewrittenSig}", retrying parse...`);
+				// Recursively try parsing rewritten SIG (with depth=1 to prevent infinite loops)
+				const rewrittenResult = await parse(rewrittenSig, 1);
+				if (rewrittenResult && validateParsedSig(rewrittenResult)) {
+					// Cache result with original SIG's cache key (not rewritten SIG's key)
+					try {
+						await cache.set(cacheKey, rewrittenResult, SIG_PARSE_TTL);
+						logger.info(`Rewritten SIG parsed successfully: ${sig.substring(0, 50)}...`);
+					} catch (error) {
+						// Cache error - log but continue
+						logger.warn('Cache error, continuing without caching', error as Error);
+					}
+					return rewrittenResult;
+				} else {
+					logger.warn(`Rewritten SIG still failed to parse. Original: "${sig}", Rewritten: "${rewrittenSig}"`);
+				}
+			} else if (rewrittenSig && rewrittenSig.trim() === sig.trim()) {
+				logger.debug(`SIG rewrite returned unchanged: ${sig.substring(0, 50)}...`);
+			} else {
+				logger.warn(`SIG rewrite failed or unavailable (returned null). Original SIG: "${sig}"`);
+			}
+		} catch (error) {
+			// Rewrite error - log and continue to return null
+			logger.error(`Error during SIG rewrite fallback for "${sig}"`, error as Error);
+		}
+	}
+
+	// Both parsers failed and rewrite either failed or didn't help
+	// If recursionDepth === 1 (already rewritten), return null to prevent infinite loops
 	logger.warn(`Failed to parse SIG: ${sig.substring(0, 50)}...`);
 	return null;
 }

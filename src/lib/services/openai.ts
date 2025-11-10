@@ -10,6 +10,7 @@ import { deduplicate } from '$lib/utils/requestDeduplicator.js';
 import { sigParseKey } from '$lib/constants/cacheKeys.js';
 import { SIG_PARSE_TTL } from '$lib/constants/cacheTtl.js';
 import type { ParsedSig } from '$lib/types/sig.js';
+import { env } from '$env/dynamic/private';
 
 const API_URL = 'https://api.openai.com/v1/chat/completions';
 const MODEL = 'gpt-4o-mini';
@@ -33,6 +34,24 @@ function createSigPrompt(sig: string): string {
 SIG: "${sig}"
 
 Return only valid JSON, no additional text.`;
+}
+
+/**
+ * Create prompt for SIG rewriting/correction.
+ */
+function createRewritePrompt(sig: string): string {
+	return `You are a medical prescription instruction (SIG) correction assistant. Your task is to correct and rewrite prescription instructions to fix typos, standardize medical terminology, and ensure they follow common prescription formats.
+
+Rules:
+- Convert written numbers to digits (e.g., "one" -> "1", "two" -> "2")
+- Standardize frequency terms (e.g., "per day" -> "daily", "2x" -> "twice")
+- Add missing units if implied (e.g., if no unit specified, assume "tablet" for oral medications)
+- Standardize format to: "Take [number] [unit] [frequency] [optional: route/timing]"
+- Keep the meaning exactly the same, only correct and standardize
+
+Original SIG: "${sig}"
+
+Return ONLY the corrected SIG text. Do not add explanations, formatting, or any other text.`;
 }
 
 /**
@@ -113,8 +132,8 @@ export async function parseSig(sig: string): Promise<ParsedSig> {
 			return cached;
 		}
 
-		// Check for API key
-		const apiKey = process.env.OPENAI_API_KEY;
+		// Check for API key (use SvelteKit's env module)
+		const apiKey = env.OPENAI_API_KEY || process.env.OPENAI_API_KEY;
 		if (!apiKey) {
 			throw new Error('OPENAI_API_KEY environment variable is not set');
 		}
@@ -203,6 +222,156 @@ export async function parseSig(sig: string): Promise<ParsedSig> {
 		} catch (error) {
 			logger.error(`Error parsing SIG with OpenAI: ${sig}`, error as Error);
 			throw error;
+		}
+	});
+}
+
+/**
+ * Rewrite/correct SIG text using OpenAI API.
+ * Used as a fallback when both regex and OpenAI parsers fail.
+ * @param sig - Prescription instruction text
+ * @returns Rewritten SIG text or null if rewrite fails
+ */
+export async function rewriteSig(sig: string): Promise<string | null> {
+	if (!sig || typeof sig !== 'string') {
+		return null;
+	}
+
+	const normalizedSig = normalizeSig(sig);
+	if (!normalizedSig) {
+		return null;
+	}
+
+	// Use prefix approach for cache key
+	const cacheKey = `rewrite:${sigParseKey(normalizedSig)}`;
+
+	return deduplicate(cacheKey, async () => {
+		// Check cache first
+		try {
+			const cached = await cache.get<string>(cacheKey);
+			if (cached) {
+				logger.debug(`SIG rewrite cache hit: ${sig.substring(0, 50)}...`);
+				return cached;
+			}
+		} catch (error) {
+			// Cache error - log but continue without cache
+			logger.warn('Cache error during rewrite lookup, continuing without cache', error as Error);
+		}
+
+		// Check for API key (use SvelteKit's env module)
+		const apiKey = env.OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+		if (!apiKey) {
+			logger.warn(`[REWRITE] OPENAI_API_KEY not set, cannot rewrite SIG: "${sig}"`);
+			return null;
+		}
+		logger.debug(`[REWRITE] API key found, proceeding with rewrite for: "${sig}"`);
+
+		// Make API call
+		try {
+			const prompt = createRewritePrompt(sig);
+			const requestBody = {
+				model: MODEL,
+				messages: [
+					{
+						role: 'user' as const,
+						content: prompt
+					}
+				],
+				temperature: 0, // Deterministic
+				max_tokens: MAX_TOKENS
+			};
+
+			logger.info(`[REWRITE] Making OpenAI API request for SIG rewrite: "${sig}"`);
+			logger.debug(`OpenAI API request for SIG rewrite: ${sig.substring(0, 50)}...`);
+
+			const response = await withRetry(
+				async () => {
+					const res = await fetchWithTimeout(
+						API_URL,
+						{
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								Authorization: `Bearer ${apiKey}`
+							},
+							body: JSON.stringify(requestBody)
+						},
+						TIMEOUT_MS
+					);
+
+					if (!res.ok) {
+						if (res.status === 401) {
+							throw new Error('Invalid OpenAI API key');
+						}
+						if (res.status === 429) {
+							throw { status: 429, message: 'Rate limit exceeded' };
+						}
+						throw { status: res.status, message: `HTTP ${res.status}` };
+					}
+
+					return res;
+				},
+				{
+					maxAttempts: 2, // Only 2 attempts for cost consideration
+					initialDelayMs: 1000,
+					maxDelayMs: 10000,
+					backoffMultiplier: 2
+				}
+			);
+
+			const data = (await response.json()) as {
+				choices?: Array<{
+					message?: {
+						content?: string;
+					};
+				}>;
+				error?: {
+					message: string;
+				};
+			};
+
+			if (data.error) {
+				logger.error(`[REWRITE] OpenAI API error during rewrite for "${sig}": ${data.error.message}`);
+				return null;
+			}
+
+			const content = data.choices?.[0]?.message?.content;
+			if (!content) {
+				logger.warn(`[REWRITE] OpenAI rewrite response missing content for: "${sig}"`);
+				return null;
+			}
+
+			// Extract text response (not JSON)
+			const rewrittenSig = content.trim();
+			logger.info(`[REWRITE] OpenAI API response received: "${rewrittenSig}"`);
+
+			// Validate response
+			if (!rewrittenSig || rewrittenSig.length === 0) {
+				logger.warn(`[REWRITE] OpenAI rewrite returned empty response for: "${sig}"`);
+				return null;
+			}
+
+			// If rewritten SIG is identical to original, return null (no change)
+			if (normalizeSig(rewrittenSig) === normalizedSig) {
+				logger.info(`[REWRITE] SIG rewrite returned unchanged (normalized match): "${sig}" -> "${rewrittenSig}"`);
+				return null;
+			}
+
+			logger.info(`[REWRITE] SIG rewritten successfully: "${sig}" -> "${rewrittenSig}"`);
+
+			// Cache result with 30-day TTL
+			try {
+				await cache.set(cacheKey, rewrittenSig, SIG_PARSE_TTL);
+			} catch (error) {
+				// Cache error - log but continue
+				logger.warn('Cache error during rewrite caching, continuing without cache', error as Error);
+			}
+
+			return rewrittenSig;
+		} catch (error) {
+			// Handle all errors gracefully - return null instead of throwing
+			logger.error(`[REWRITE] Error rewriting SIG with OpenAI: "${sig}"`, error as Error);
+			return null;
 		}
 	});
 }

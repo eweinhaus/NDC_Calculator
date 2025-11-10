@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { searchByDrugName, getAllNdcs, getSpellingSuggestions } from '$lib/services/rxnorm';
 import { getPackageDetails, getAllPackages } from '$lib/services/fda';
-import { parseSig } from '$lib/services/openai';
+import { parseSig, rewriteSig } from '$lib/services/openai';
 import { cache } from '$lib/services/cache';
 
 // Mock fetch globally
@@ -312,6 +312,140 @@ describe('API Services Integration', () => {
 			delete process.env.OPENAI_API_KEY;
 
 			await expect(parseSig('Take 1 tablet twice daily')).rejects.toThrow('OPENAI_API_KEY');
+		});
+
+		describe('rewriteSig()', () => {
+			it('should rewrite SIG with typos', async () => {
+				const mockResponse = {
+					choices: [
+						{
+							message: {
+								content: 'Take 1 tablet twice daily'
+							}
+						}
+					]
+				};
+
+				(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+					ok: true,
+					json: async () => mockResponse
+				});
+
+				const rewritten = await rewriteSig('Take 1 tablt twic daily');
+				expect(rewritten).toBe('Take 1 tablet twice daily');
+			});
+
+			it('should cache rewritten SIG', async () => {
+				const mockResponse = {
+					choices: [
+						{
+							message: {
+								content: 'Take 1 tablet twice daily'
+							}
+						}
+					]
+				};
+
+				(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+					ok: true,
+					json: async () => mockResponse
+				});
+
+				// First call
+				const rewritten1 = await rewriteSig('Take 1 tablt twic daily');
+				expect(rewritten1).toBe('Take 1 tablet twice daily');
+				expect(global.fetch).toHaveBeenCalledTimes(1);
+
+				// Second call should use cache
+				const rewritten2 = await rewriteSig('Take 1 tablt twic daily');
+				expect(rewritten2).toBe('Take 1 tablet twice daily');
+				expect(global.fetch).toHaveBeenCalledTimes(1); // Still 1, cache hit
+			});
+
+			it('should return null if rewrite is identical to original', async () => {
+				const mockResponse = {
+					choices: [
+						{
+							message: {
+								content: 'Take 1 tablet twice daily'
+							}
+						}
+					]
+				};
+
+				(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+					ok: true,
+					json: async () => mockResponse
+				});
+
+				const rewritten = await rewriteSig('Take 1 tablet twice daily');
+				expect(rewritten).toBeNull(); // Identical, so returns null
+			});
+
+			it('should return null for empty response', async () => {
+				const mockResponse = {
+					choices: [
+						{
+							message: {
+								content: ''
+							}
+						}
+					]
+				};
+
+				(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+					ok: true,
+					json: async () => mockResponse
+				});
+
+				const rewritten = await rewriteSig('Take 1 tablt twic daily');
+				expect(rewritten).toBeNull();
+			});
+
+			it('should return null if API key not set', async () => {
+				delete process.env.OPENAI_API_KEY;
+
+				const rewritten = await rewriteSig('Take 1 tablt twic daily');
+				expect(rewritten).toBeNull();
+			});
+
+			it('should return null for invalid input', async () => {
+				const result1 = await rewriteSig('');
+				expect(result1).toBeNull();
+
+				const result2 = await rewriteSig(null as any);
+				expect(result2).toBeNull();
+			});
+
+			it('should handle API errors gracefully', async () => {
+				(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+					ok: false,
+					status: 429
+				});
+
+				const rewritten = await rewriteSig('Take 1 tablt twic daily');
+				expect(rewritten).toBeNull();
+			});
+
+			it('should standardize non-standard wording', async () => {
+				const mockResponse = {
+					choices: [
+						{
+							message: {
+								content: 'Take 1 tablet twice daily'
+							}
+						}
+					]
+				};
+
+				(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+					ok: true,
+					json: async () => mockResponse
+				});
+
+				const rewritten = await rewriteSig('1 pill 2x per day');
+				expect(rewritten).toBe('Take 1 tablet twice daily');
+			});
 		});
 	});
 

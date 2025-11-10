@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { parse } from '../../lib/core/sigParser';
 import * as regexParser from '../../lib/core/regexSigParser';
 import * as openaiParser from '../../lib/core/openaiSigParser';
+import * as openaiService from '../../lib/services/openai';
 import * as cacheService from '../../lib/services/cache';
 import { ParsedSig } from '../../lib/types/sig';
 
@@ -12,6 +13,10 @@ vi.mock('../../lib/core/regexSigParser', () => ({
 
 vi.mock('../../lib/core/openaiSigParser', () => ({
 	parse: vi.fn(),
+}));
+
+vi.mock('../../lib/services/openai', () => ({
+	rewriteSig: vi.fn(),
 }));
 
 vi.mock('../../lib/services/cache', () => ({
@@ -217,6 +222,114 @@ describe('SIG Parser Orchestrator', () => {
 
 			expect(result1).toEqual(cached);
 			expect(result2).toEqual(cached);
+		});
+
+		describe('rewrite fallback', () => {
+			it('should attempt rewrite when both parsers fail', async () => {
+				const rewrittenSig = 'Take 1 tablet twice daily';
+				const parsedResult: ParsedSig = {
+					dosage: 1,
+					frequency: 2,
+					unit: 'tablet',
+					confidence: 0.9,
+				};
+
+				vi.mocked(cacheService.cache.get).mockResolvedValue(null);
+				vi.mocked(regexParser.parse).mockReturnValue(null);
+				vi.mocked(openaiParser.parse).mockResolvedValue(null);
+				vi.mocked(openaiService.rewriteSig).mockResolvedValue(rewrittenSig);
+				// Mock recursive parse call (rewritten SIG parses successfully)
+				vi.mocked(regexParser.parse).mockReturnValueOnce(null).mockReturnValueOnce(parsedResult);
+				vi.mocked(cacheService.cache.set).mockResolvedValue();
+
+				const result = await parse('Take 1 tablt twic daily');
+				expect(result).toEqual(parsedResult);
+				expect(openaiService.rewriteSig).toHaveBeenCalledWith('Take 1 tablt twic daily');
+				expect(cacheService.cache.set).toHaveBeenCalled();
+			});
+
+			it('should return null if rewrite fails', async () => {
+				vi.mocked(cacheService.cache.get).mockResolvedValue(null);
+				vi.mocked(regexParser.parse).mockReturnValue(null);
+				vi.mocked(openaiParser.parse).mockResolvedValue(null);
+				vi.mocked(openaiService.rewriteSig).mockResolvedValue(null);
+
+				const result = await parse('Invalid SIG text');
+				expect(result).toBeNull();
+				expect(openaiService.rewriteSig).toHaveBeenCalled();
+			});
+
+			it('should return null if rewritten SIG still fails to parse', async () => {
+				const rewrittenSig = 'Take 1 tablet twice daily';
+
+				vi.mocked(cacheService.cache.get).mockResolvedValue(null);
+				vi.mocked(regexParser.parse).mockReturnValue(null);
+				vi.mocked(openaiParser.parse).mockResolvedValue(null);
+				vi.mocked(openaiService.rewriteSig).mockResolvedValue(rewrittenSig);
+				// Mock recursive parse call (rewritten SIG also fails)
+				vi.mocked(regexParser.parse).mockReturnValue(null);
+				vi.mocked(openaiParser.parse).mockResolvedValue(null);
+
+				const result = await parse('Invalid SIG text');
+				expect(result).toBeNull();
+				expect(openaiService.rewriteSig).toHaveBeenCalled();
+			});
+
+			it('should not rewrite if recursion depth is 1', async () => {
+				vi.mocked(cacheService.cache.get).mockResolvedValue(null);
+				vi.mocked(regexParser.parse).mockReturnValue(null);
+				vi.mocked(openaiParser.parse).mockResolvedValue(null);
+
+				const result = await parse('Invalid SIG text', 1);
+				expect(result).toBeNull();
+				expect(openaiService.rewriteSig).not.toHaveBeenCalled();
+			});
+
+			it('should cache result with original SIG key after rewrite', async () => {
+				const rewrittenSig = 'Take 1 tablet twice daily';
+				const parsedResult: ParsedSig = {
+					dosage: 1,
+					frequency: 2,
+					unit: 'tablet',
+					confidence: 0.9,
+				};
+
+				vi.mocked(cacheService.cache.get).mockResolvedValue(null);
+				vi.mocked(regexParser.parse).mockReturnValue(null);
+				vi.mocked(openaiParser.parse).mockResolvedValue(null);
+				vi.mocked(openaiService.rewriteSig).mockResolvedValue(rewrittenSig);
+				// Mock recursive parse call
+				vi.mocked(regexParser.parse).mockReturnValueOnce(null).mockReturnValueOnce(parsedResult);
+				vi.mocked(cacheService.cache.set).mockResolvedValue();
+
+				await parse('Take 1 tablt twic daily');
+				// Should cache with original SIG's key, not rewritten SIG's key
+				expect(cacheService.cache.set).toHaveBeenCalled();
+			});
+
+			it('should handle rewrite errors gracefully', async () => {
+				vi.mocked(cacheService.cache.get).mockResolvedValue(null);
+				vi.mocked(regexParser.parse).mockReturnValue(null);
+				vi.mocked(openaiParser.parse).mockResolvedValue(null);
+				vi.mocked(openaiService.rewriteSig).mockRejectedValue(new Error('Rewrite error'));
+
+				const result = await parse('Invalid SIG text');
+				expect(result).toBeNull();
+				expect(openaiService.rewriteSig).toHaveBeenCalled();
+			});
+
+			it('should not rewrite if rewrite returns identical SIG', async () => {
+				const originalSig = 'Take 1 tablet twice daily';
+
+				vi.mocked(cacheService.cache.get).mockResolvedValue(null);
+				vi.mocked(regexParser.parse).mockReturnValue(null);
+				vi.mocked(openaiParser.parse).mockResolvedValue(null);
+				vi.mocked(openaiService.rewriteSig).mockResolvedValue(originalSig);
+
+				const result = await parse(originalSig);
+				expect(result).toBeNull();
+				expect(openaiService.rewriteSig).toHaveBeenCalled();
+			});
 		});
 	});
 });

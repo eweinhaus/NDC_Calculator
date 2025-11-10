@@ -21,13 +21,16 @@ The system follows a layered architecture with clear separation of concerns:
 - Two-step process ensures accurate, up-to-date data
 
 ### 2. SIG Parsing Strategy
-**Decision:** Regex-first approach (primary), OpenAI fallback only for complex cases
+**Decision:** Regex-first approach (primary), OpenAI fallback for complex cases, AI rewrite fallback when both fail
 
 **Rationale:**
 - Cost optimization: Regex handles 80%+ of cases without AI costs
 - Performance: Regex is faster than API calls
 - Fallback ensures complex cases are still handled
 - Confidence threshold (0.8) determines when to use AI
+- AI rewrite fallback corrects typos and standardizes wording before failing
+- Rewrite only attempted when both regex and OpenAI parsers fail (cost optimization)
+- Max 1 rewrite attempt to prevent infinite recursion
 
 ### 3. Caching Strategy
 **Decision:** Aggressive caching with appropriate TTLs
@@ -150,6 +153,7 @@ External API interactions are abstracted into service classes:
   - Active status determination from `listing_expiration_date`
 - `OpenAIService`: Handles OpenAI API calls (fallback only) (✅ implemented)
   - `parseSig()`: SIG parsing with JSON response validation
+  - `rewriteSig()`: SIG rewriting/correction (typos, standardization) - fallback when both parsers fail
   - Cost-optimized (2 retry attempts max, only when regex confidence < 0.8)
 - `CacheService`: Unified caching interface (✅ implemented)
   - In-memory Map with LRU eviction (development)
@@ -160,8 +164,10 @@ External API interactions are abstracted into service classes:
 SIG parsing uses strategy pattern: ✅ Implemented
 - Primary strategy: Regex parser (handles 80%+ of cases)
 - Fallback strategy: AI parser (when regex confidence < 0.8)
-- Orchestrator (`sigParser.ts`) selects strategy based on confidence
+- Rewrite fallback: AI rewrite when both parsers fail (corrects typos, standardizes wording)
+- Orchestrator (`sigParser.ts`) selects strategy based on confidence and handles rewrite fallback
 - Caching integrated at orchestrator level (30-day TTL)
+- Recursion depth parameter prevents infinite loops (max 1 rewrite attempt)
 
 ### 3. Factory Pattern
 NDC normalizer creates normalized NDC objects from various input formats.
