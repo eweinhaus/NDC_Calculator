@@ -42,12 +42,16 @@
 - **Package Manager:** npm or pnpm
 
 ### Deployment
-- **Initial:** Render (Node.js environment) - ⚠️ Service created, deployment pending build command fix
-- **Production:** GCP (Cloud Run/App Engine)
-- **Caching:** In-memory (dev), Redis (production)
+- **Initial:** Render (Node.js environment) - ✅ **LIVE**
+  - Service URL: https://ndc-calculator.onrender.com
+  - Dashboard: https://dashboard.render.com/web/srv-d494eia4d50c7394ejk0
+  - Build Command: `npm install && npm run build` (working with .npmrc fix)
+  - Start Command: `node build`
+  - Status: Live and accessible
+- **Production:** GCP (Cloud Run/App Engine) - Future consideration
+- **Caching:** In-memory (dev), Redis (production) - Ready for Redis upgrade
 - **Adapter:** `@sveltejs/adapter-node` for Render deployment
-- **Build Command:** `npm ci && npm run build` (required to ensure devDependencies install)
-- **Start Command:** `node build`
+- **Build Fix:** `.npmrc` file with `production=false` ensures devDependencies install
 
 ## Development Setup
 
@@ -179,5 +183,5 @@ All types defined in `lib/types/`:
 
 ---
 
-**Last Updated:** Phase 5 Completion (2025-01-27)
+**Last Updated:** Phase 5 Complete & Deployed (2025-01-27) - Service Live ✅
 

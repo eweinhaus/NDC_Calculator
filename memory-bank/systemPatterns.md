@@ -268,7 +268,12 @@ Response formatting builds structured JSON responses with all required fields.
 
 ---
 
-**Last Updated:** Phase 5 Complete (2025-01-27)
+**Last Updated:** Phase 5 Complete & Deployed (2025-01-27)
+
+**Deployment:**
+- ✅ **Service URL:** https://ndc-calculator.onrender.com
+- ✅ **Status:** Live and accessible
+- ✅ **Build Fix:** `.npmrc` file added to ensure devDependencies install during build
 
 **Verification Reports:**
 - Phase 3: `PHASE3_VERIFICATION_REPORT.md` - All 7 acceptance criteria verified
