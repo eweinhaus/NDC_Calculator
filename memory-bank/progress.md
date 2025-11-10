@@ -158,6 +158,9 @@
 - Performance optimizations (debounce utility ready for form validation) - 4 tests passing
 - Complete main page integration with state management, API integration, loading states, error handling, and smooth transitions
 - Toast notification system using Svelte stores with auto-dismiss
+- PDF generation utility implemented (jsPDF library, openPdfInNewTab, downloadResultsAsPdf functions)
+- PDF viewing integrated into main page ("View PDF" button opens PDF in new tab with professional styled output)
+- Test/debug routes created for development (test-pdf page, test-rewrite page and API endpoint)
 - All components use TypeScript with proper type definitions
 - All components handle missing optional data gracefully
 - **API Endpoint Integration:** Updated `/api/calculate` endpoint to implement full flow (drug lookup → NDC retrieval → SIG parsing → calculation → NDC selection → warnings) to match UI expectations

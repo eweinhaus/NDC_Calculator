@@ -5,6 +5,7 @@
 	import ErrorDisplay from '../lib/components/ErrorDisplay.svelte';
 	import SkeletonLoader from '../lib/components/SkeletonLoader.svelte';
 	import Toast from '../lib/components/Toast.svelte';
+	import Autocomplete from '../lib/components/Autocomplete.svelte';
 	import { debounce } from '../lib/utils/debounce.js';
 	import { openPdfInNewTab } from '../lib/utils/pdfGenerator.js';
 	import { showToast } from '../lib/stores/toast.js';
@@ -280,27 +281,20 @@
 			<div class="max-w-3xl mx-auto">
 				<form on:submit|preventDefault={handleSubmit} class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 md:p-8 space-y-5">
 					<div class="form-group">
-						<label for="drugInput" class="block mb-2 font-semibold text-gray-700 text-sm md:text-base">
-							Drug Name or NDC
-							<span class="text-red-500" aria-label="required">*</span>
-						</label>
-						<input
+						<Autocomplete
 							id="drugInput"
-							type="text"
 							bind:value={drugInput}
-							on:blur={() => handleBlur('drugInput')}
+							label="Drug Name or NDC"
 							placeholder="e.g., Lisinopril or 00002-3227-30"
-							class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors {shouldShowError('drugInput') ? 'border-red-500 focus:ring-red-500' : ''}"
-							aria-invalid={shouldShowError('drugInput') ? 'true' : 'false'}
-							aria-describedby={shouldShowError('drugInput') ? 'drugInput-error' : undefined}
-							aria-required="true"
-							required
+							required={true}
+							error={shouldShowError('drugInput') ? errors.drugInput : null}
+							on:input={(event) => {
+								drugInput = event.detail;
+							}}
+							on:blur={() => handleBlur('drugInput')}
+							minLength={3}
+							maxSuggestions={20}
 						/>
-						{#if shouldShowError('drugInput')}
-							<span id="drugInput-error" class="block text-red-600 text-sm mt-1.5 font-medium" role="alert">
-								{errors.drugInput}
-							</span>
-						{/if}
 					</div>
 
 					<div class="form-group">

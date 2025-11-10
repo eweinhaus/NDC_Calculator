@@ -41,6 +41,9 @@
   - ✅ Testing summary: `PHASE4_TESTING_SUMMARY.md`
   - ✅ Browser testing completed (form validation, loading states, error handling, keyboard navigation, responsive design)
   - ✅ API endpoint updated to match UI expectations (full flow integration)
+  - ✅ PDF generation feature implemented (openPdfInNewTab, downloadResultsAsPdf)
+  - ✅ PDF viewing integrated into main page with "View PDF" button
+  - ✅ Test pages created for PDF generation and SIG rewrite testing
 - ✅ Results display components created (7 components: DrugInfoCard, QuantityBreakdown, RecommendedNdc, AlternativeNdcs, WarningsSection, InactiveNdcsList, ResultsDisplay)
 - ✅ Skeleton loader component implemented (shimmer animation, prefers-reduced-motion support, multiple variants)
 - ✅ Error display component implemented (spelling suggestions, retry functionality, countdown timer, error message mapping)
@@ -50,6 +53,9 @@
 - ✅ Performance optimizations implemented (debounce utility, ready for form validation)
 - ✅ Main page integration completed (state management, API integration, loading states, error handling, smooth transitions)
 - ✅ Toast notification system implemented (Svelte store, auto-dismiss, accessible)
+- ✅ PDF generation utility implemented (jsPDF library, openPdfInNewTab, downloadResultsAsPdf functions)
+- ✅ PDF viewing integrated into main page ("View PDF" button opens PDF in new tab)
+- ✅ Test/debug routes created (test-pdf, test-rewrite pages and API endpoint)
 - ✅ **Phase 3 Verified Complete:** Core Business Logic verified complete (all 7 AC met, 82+ tests passing)
   - ✅ Verification report: `PHASE3_VERIFICATION_REPORT.md`
   - ✅ All components functional: SIG parsing, quantity calculation, NDC selection, multi-pack, warnings
@@ -241,8 +247,12 @@
 - `/src/lib/utils/clipboard.ts` - Clipboard utility with fallback
 - `/src/lib/utils/debounce.ts` - Debounce utility for performance
 - `/src/lib/utils/errorMessages.ts` - Error message mapping utility
+- `/src/lib/utils/pdfGenerator.ts` - PDF generation utility (openPdfInNewTab, downloadResultsAsPdf)
 - `/src/lib/stores/toast.ts` - Toast notification Svelte store
-- `/src/routes/+page.svelte` - Main page with complete integration
+- `/src/routes/+page.svelte` - Main page with complete integration (includes PDF viewing)
+- `/src/routes/test-pdf/+page.svelte` - PDF generation test page
+- `/src/routes/test-rewrite/+page.svelte` - SIG rewrite test page
+- `/src/routes/api/test-rewrite/+server.ts` - Test endpoint for SIG rewrite functionality
 
 ## Notes
 

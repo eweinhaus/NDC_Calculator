@@ -169,6 +169,7 @@ All types defined in `lib/types/`:
 - Tailwind CSS
 - PostCSS
 - Autoprefixer
+- jsPDF (^3.0.3) - PDF generation library
 
 ### Development Dependencies
 - ESLint
@@ -180,6 +181,31 @@ All types defined in `lib/types/`:
 ### Optional Dependencies
 - date-fns (if needed for date handling)
 - Redis client (for production caching)
+
+## PDF Generation Feature
+
+### Implementation
+- **Library:** jsPDF (^3.0.3)
+- **Utility:** `src/lib/utils/pdfGenerator.ts`
+- **Functions:**
+  - `openPdfInNewTab(results)` - Generates PDF and opens in new browser tab
+  - `downloadResultsAsPdf(results)` - Generates PDF and triggers download
+- **Features:**
+  - Professional styled PDF with blue header
+  - Two-column layout for drug info and quantity calculation
+  - Styled section boxes with blue title bars
+  - Includes all calculation results (drug info, quantity, recommended NDC, alternatives, warnings)
+  - Handles text wrapping and page overflow
+  - Sanitizes text for PDF compatibility
+  - Multiple download methods (blob URL with data URL fallback)
+- **Integration:**
+  - "View PDF" button in main results page
+  - Opens PDF in new tab for viewing
+  - Toast notifications for success/error states
+- **Test Pages:**
+  - `/test-pdf` - Test page for PDF generation functionality
+  - `/test-rewrite` - Test page for SIG rewrite functionality
+  - `/api/test-rewrite` - API endpoint for testing SIG rewrite
 
 ---
 

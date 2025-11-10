@@ -68,9 +68,13 @@ The system follows a layered architecture with clear separation of concerns:
 src/
 ├── routes/
 │   ├── +page.svelte              # Main UI ✅
+│   ├── +layout.svelte            # Root layout ✅
 │   ├── api/
 │   │   ├── calculate/+server.ts  # POST /api/calculate ✅ (Full flow: drug lookup → NDC retrieval → SIG parsing → calculation → NDC selection → warnings)
-│   │   └── health/+server.ts     # GET /api/health ✅
+│   │   ├── health/+server.ts     # GET /api/health ✅
+│   │   └── test-rewrite/+server.ts # GET /api/test-rewrite ✅ (Test endpoint for SIG rewrite)
+│   ├── test-pdf/+page.svelte     # PDF generation test page ✅
+│   └── test-rewrite/+page.svelte # SIG rewrite test page ✅
 ├── lib/
 │   ├── components/               # UI Components ✅
 │   │   ├── results/              # Results display components ✅
@@ -107,7 +111,8 @@ src/
 │   │   ├── errorMessages.ts      # Error message mapping ✅
 │   │   ├── requestDeduplicator.ts # Deduplicate concurrent requests ✅
 │   │   ├── retry.ts              # Retry logic with exponential backoff ✅
-│   │   └── logger.ts             # Structured logging ✅
+│   │   ├── logger.ts             # Structured logging ✅
+│   │   └── pdfGenerator.ts       # PDF generation utility ✅
 │   ├── constants/                # Constants
 │   │   ├── cacheKeys.ts          # Cache key generation functions ✅
 │   │   ├── cacheTtl.ts           # Cache TTL constants ✅
@@ -263,6 +268,21 @@ Response formatting builds structured JSON responses with all required fields.
 - **Spelling Suggestions:** Clickable chips that pre-fill input
 - **Retry Functionality:** Retry button with optional countdown timer
 - **Error Message Mapping:** User-friendly messages from error codes
+
+### PDF Generation (✅ Implemented)
+- **PDF Utility:** `pdfGenerator.ts` with two main functions
+  - `openPdfInNewTab()` - Generates PDF and opens in new browser tab
+  - `downloadResultsAsPdf()` - Generates PDF and triggers download
+- **Library:** jsPDF (^3.0.3) for PDF generation
+- **Features:**
+  - Professional styled PDF with blue header and section boxes
+  - Two-column layout for drug information and quantity calculation
+  - Includes all calculation results (drug info, quantity, recommended NDC, alternatives, warnings, inactive NDCs)
+  - Text sanitization for PDF compatibility
+  - Handles text wrapping and page overflow gracefully
+  - Multiple download methods (blob URL with data URL fallback)
+- **Integration:** "View PDF" button in main results page opens PDF in new tab
+- **Test Pages:** `/test-pdf` and `/test-rewrite` routes for development testing
 
 ## Security Patterns
 

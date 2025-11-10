@@ -60,6 +60,7 @@ Mismatched dosage forms (tablets vs capsules) lead to fulfillment errors. The sy
 - Color-coded warnings (error/warning/info)
 - Responsive design (desktop/tablet/mobile)
 - Accessibility (ARIA labels, keyboard navigation)
+- PDF export functionality (view results as PDF in new tab)
 
 ## Value Propositions
 
@@ -68,6 +69,7 @@ Mismatched dosage forms (tablets vs capsules) lead to fulfillment errors. The sy
 3. **Minimizes waste** by recommending optimal package combinations
 4. **Prevents errors** by flagging inactive NDCs and mismatches before fulfillment
 5. **Improves satisfaction** through faster, more accurate prescription processing
+6. **Enables documentation** through PDF export of calculation results for records
 
 ---
 

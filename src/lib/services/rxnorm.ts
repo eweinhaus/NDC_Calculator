@@ -252,3 +252,101 @@ export async function getSpellingSuggestions(drugName: string): Promise<string[]
 	}
 }
 
+/**
+ * Get autocomplete suggestions for a partial drug name.
+ * Uses both RxNorm spelling suggestions API and FDA API for comprehensive results.
+ * @param query - Partial drug name query (minimum 3 characters)
+ * @returns Array of suggested drug names (limited to 20)
+ */
+export async function getAutocompleteSuggestions(query: string): Promise<string[]> {
+	const trimmedQuery = query.trim();
+	
+	// Don't search for very short queries (less than 3 characters)
+	if (trimmedQuery.length < 3) {
+		return [];
+	}
+
+	const suggestions = new Set<string>();
+	const queryUpper = trimmedQuery.toUpperCase();
+
+	// Strategy 1: Try RxNorm spelling suggestions API (fast, no rate limits)
+	try {
+		const response = await makeRequest<RxNormSuggestionResponse>(
+			`/spellingsuggestions.json?name=${encodeURIComponent(trimmedQuery)}`
+		);
+		const rxnormSuggestions = response.suggestionGroup?.suggestionList?.suggestion || [];
+		rxnormSuggestions.forEach(s => suggestions.add(s));
+		logger.debug(`RxNorm returned ${rxnormSuggestions.length} suggestions`);
+	} catch (error) {
+		logger.debug(`RxNorm suggestions failed for: ${trimmedQuery}`, error as Error);
+	}
+
+	// Strategy 2: Use FDA API for prefix search (more comprehensive, but has rate limits)
+	// Only use if we have fewer than 10 suggestions from RxNorm
+	// IMPORTANT: Validate FDA suggestions against RxNorm to ensure they work
+	if (suggestions.size < 10) {
+		try {
+			const fdaUrl = `https://api.fda.gov/drug/ndc.json?search=generic_name:${encodeURIComponent(queryUpper)}*&limit=50`;
+			logger.debug(`FDA API request: ${fdaUrl}`);
+			
+			const fdaResponse = await fetchWithTimeout(fdaUrl, TIMEOUT_MS);
+			if (fdaResponse.ok) {
+				const fdaData = await fdaResponse.json() as {
+					results?: Array<{
+						generic_name?: string;
+					}>;
+				};
+				
+				if (fdaData.results) {
+					// Extract unique generic names that start with the query
+					const fdaGenericNames = new Set<string>();
+					fdaData.results.forEach((result) => {
+						if (result.generic_name) {
+							const genericName = result.generic_name.trim();
+							// Only add if it starts with the query (case-insensitive)
+							if (genericName.toUpperCase().startsWith(queryUpper)) {
+								fdaGenericNames.add(genericName);
+							}
+						}
+					});
+
+					// Validate FDA suggestions against RxNorm (only show drugs that RxNorm recognizes)
+					// Validate in parallel but limit to first 20 to avoid too many API calls
+					const fdaNamesArray = Array.from(fdaGenericNames).slice(0, 20);
+					const validationPromises = fdaNamesArray.map(async (genericName) => {
+						try {
+							const rxcui = await searchByDrugName(genericName);
+							if (rxcui) {
+								return genericName;
+							}
+							return null;
+						} catch (error) {
+							logger.debug(`Validation failed for ${genericName}`, error as Error);
+							return null;
+						}
+					});
+
+					const validatedNames = await Promise.all(validationPromises);
+					validatedNames.forEach((name) => {
+						if (name) {
+							suggestions.add(name);
+						}
+					});
+
+					logger.debug(`FDA returned ${fdaData.results.length} results, validated ${validatedNames.filter(n => n).length} suggestions`);
+				}
+			}
+		} catch (error) {
+			logger.debug(`FDA suggestions failed for: ${trimmedQuery}`, error as Error);
+			// Don't throw - FDA is a fallback
+		}
+	}
+
+	// Convert to array, sort, and limit
+	const suggestionsArray = Array.from(suggestions)
+		.sort()
+		.slice(0, 20); // Increased limit to 20
+	
+	logger.debug(`Total unique suggestions for "${trimmedQuery}": ${suggestionsArray.length}`);
+	return suggestionsArray;
+}
