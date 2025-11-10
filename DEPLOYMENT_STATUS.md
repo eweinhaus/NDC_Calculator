@@ -27,8 +27,9 @@
 - **Auto-deploy:** Enabled (deploys on push to main branch)
 
 **Configuration:**
-- **Build Command:** `npm ci && npm run build` (updated to ensure devDependencies are installed)
+- **Build Command:** ⚠️ **NEEDS UPDATE** - Currently `npm install && npm run build`, should be `npm ci && npm run build`
 - **Start Command:** `node build`
+- **Note:** Update build command in Render dashboard to `npm ci && npm run build` to ensure devDependencies install
 - **Branch:** `main`
 - **Repository:** https://github.com/eweinhaus/NDC_Calculator
 
