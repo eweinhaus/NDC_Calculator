@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { searchByDrugName } from '$lib/services/rxnorm';
+import { searchByDrugName, getSpellingSuggestions } from '$lib/services/rxnorm';
 import { getPackagesByRxcui } from '$lib/services/fda';
 import { parse as parseSig } from '$lib/core/sigParser';
 import { cache } from '$lib/services/cache';
@@ -71,9 +71,7 @@ describe('Calculate Endpoint Integration', () => {
 
 	it('should handle drug not found error', async () => {
 		vi.mocked(searchByDrugName).mockResolvedValue(null);
-		vi.mocked(require('$lib/services/rxnorm').getSpellingSuggestions).mockResolvedValue([
-			'Lisinopril',
-		]);
+		vi.mocked(getSpellingSuggestions).mockResolvedValue(['Lisinopril']);
 
 		const rxcui = await searchByDrugName('Lisinoprll');
 		expect(rxcui).toBeNull();
