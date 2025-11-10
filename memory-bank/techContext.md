@@ -42,9 +42,12 @@
 - **Package Manager:** npm or pnpm
 
 ### Deployment
-- **Initial:** Render (Node.js environment)
+- **Initial:** Render (Node.js environment) - ⚠️ Service created, deployment pending build command fix
 - **Production:** GCP (Cloud Run/App Engine)
 - **Caching:** In-memory (dev), Redis (production)
+- **Adapter:** `@sveltejs/adapter-node` for Render deployment
+- **Build Command:** `npm ci && npm run build` (required to ensure devDependencies install)
+- **Start Command:** `node build`
 
 ## Development Setup
 
@@ -168,6 +171,7 @@ All types defined in `lib/types/`:
 - Prettier
 - Vitest
 - Playwright
+- @sveltejs/adapter-node (for Render deployment)
 
 ### Optional Dependencies
 - date-fns (if needed for date handling)
@@ -175,5 +179,5 @@ All types defined in `lib/types/`:
 
 ---
 
-**Last Updated:** Phase 3 Completion (2025-11-10)
+**Last Updated:** Phase 5 Completion (2025-01-27)
 
