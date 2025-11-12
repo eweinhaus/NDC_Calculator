@@ -22,7 +22,7 @@ describe('Multi-Pack Combination Generator', () => {
 				createNdcInfo('12345-678-90', 30, '30 TABLET in 1 BOTTLE'),
 			];
 
-			const results = selectOptimal(ndcList, 90);
+			const results = selectOptimal(ndcList, 90, 'tablet');
 			const multiPack = results.find((r) => r.packageCount && r.packageCount > 1);
 			
 			expect(multiPack).toBeDefined();
@@ -39,7 +39,7 @@ describe('Multi-Pack Combination Generator', () => {
 				createNdcInfo('12345-678-90', 1, '1 TABLET in 1 BOTTLE'), // Very small package
 			];
 
-			const results = selectOptimal(ndcList, 100); // Would need 100 packages
+			const results = selectOptimal(ndcList, 100, 'tablet'); // Would need 100 packages
 			const multiPack = results.find((r) => r.packageCount && r.packageCount > 1);
 			
 			// Should either not have multi-pack or have limited packages
@@ -54,7 +54,7 @@ describe('Multi-Pack Combination Generator', () => {
 				createNdcInfo('12345-678-91', 60, '60 TABLET in 1 BOTTLE'), // Single-pack option
 			];
 
-			const results = selectOptimal(ndcList, 60);
+			const results = selectOptimal(ndcList, 60, 'tablet');
 			
 			// Should have both single-pack (60) and multi-pack (2×30) options
 			const singlePack = results.find((r) => r.packageCount === 1 && r.totalQuantity === 60);
@@ -74,7 +74,7 @@ describe('Multi-Pack Combination Generator', () => {
 				createNdcInfo('12345-678-90', 10, '10 TABLET in 1 BOTTLE'),
 			];
 
-			const results = selectOptimal(ndcList, 1000); // Very large quantity
+			const results = selectOptimal(ndcList, 1000, 'tablet'); // Very large quantity
 			const multiPack = results.find((r) => r.packageCount && r.packageCount > 1);
 			
 			// Should respect package count limit
@@ -88,7 +88,7 @@ describe('Multi-Pack Combination Generator', () => {
 				createNdcInfo('12345-678-90', 5, '5 TABLET in 1 BOTTLE'),
 			];
 
-			const results = selectOptimal(ndcList, 50);
+			const results = selectOptimal(ndcList, 50, 'tablet');
 			const multiPack = results.find((r) => r.packageCount && r.packageCount > 1);
 			
 			expect(multiPack).toBeDefined();
@@ -103,7 +103,7 @@ describe('Multi-Pack Combination Generator', () => {
 				createNdcInfo('12345-678-90', 30, '30 TABLET in 1 BOTTLE'),
 			];
 
-			const results = selectOptimal(ndcList, 85); // Would need 3 packages (90 total)
+			const results = selectOptimal(ndcList, 85, 'tablet'); // Would need 3 packages (90 total)
 			const multiPack = results.find((r) => r.packageCount && r.packageCount > 1);
 			
 			expect(multiPack).toBeDefined();
@@ -120,7 +120,7 @@ describe('Multi-Pack Combination Generator', () => {
 				createNdcInfo('12345-678-90', 30, '30 TABLET in 1 BOTTLE'),
 			];
 
-			const results = selectOptimal(ndcList, 61); // Would need 2.033... packages
+			const results = selectOptimal(ndcList, 61, 'tablet'); // Would need 2.033... packages
 			const multiPack = results.find((r) => r.packageCount && r.packageCount > 1);
 			
 			expect(multiPack).toBeDefined();

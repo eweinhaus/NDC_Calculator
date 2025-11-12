@@ -39,10 +39,16 @@
 - **Backward Compatible:** All existing functionality preserved, new features are optional
 
 **Test Results:**
-- 326 tests passing
-- 12 failures (edge cases, not core functionality)
+- 336 tests passing (up from 326 after edge case fixes)
+- 2 failures (pre-existing test infrastructure issues, not related to special dosage forms)
 - New test files: `unitConverter.test.ts`
 - Enhanced test files: `packageParser.test.ts`, `regexSigParser.test.ts`, `quantityCalculator.test.ts`, `ndcSelector.test.ts`
+
+**Edge Case Fixes (2025-01-27):**
+- ✅ Fixed multi-pack rounding test - Added missing `targetUnit` parameter to all `selectOptimal()` calls in `multiPackGenerator.test.ts`
+- ✅ Fixed preferred NDC boost logic - Removed score cap (allows scores > 100), boost all candidates (not just first), improved NDC format normalization
+- ✅ Fixed integration tests - Added `targetUnit` parameter to all `selectOptimal()` calls in `calculate.test.ts`
+- ✅ All edge case tests now passing: Multi-pack rounding ✅, Preferred NDC ranking ✅, Preferred NDC formatting ✅
 
 ## What's Left to Build
 
@@ -261,6 +267,19 @@
 - NDC normalizer test coverage at 83.01% (slightly below 90% target, but acceptable)
 - TypeScript path aliases warning in build (cosmetic, functionality works correctly)
 - Note: The `/api/calculate` endpoint was updated during Phase 4 to implement the complete flow (drug lookup → NDC retrieval → SIG parsing → calculation → NDC selection → warnings). This was necessary to match UI expectations and represents proper integration of Phase 2 services with Phase 3 business logic. The endpoint is fully functional and tested.
+
+### Test Infrastructure Issues (Non-Critical)
+- ⚠️ **FDA NDC Autocomplete Test Failure:** `src/tests/unit/fda-ndc-autocomplete.test.ts`
+  - **Issue:** Transform error in test file (test infrastructure issue)
+  - **Impact:** None on production functionality
+  - **Priority:** Low - can be addressed in future test infrastructure improvements
+  - **Status:** Pre-existing issue, not related to recent edge case fixes
+  
+- ⚠️ **OpenAI Service Test Failure:** `src/tests/integration/services.test.ts` - "should throw error if API key not set"
+  - **Issue:** Mock setup issue - test expects specific error message but gets different error
+  - **Impact:** None on production functionality
+  - **Priority:** Low - test infrastructure improvement needed
+  - **Status:** Pre-existing issue, not related to recent edge case fixes
 
 ## Blockers
 

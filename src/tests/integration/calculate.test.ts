@@ -39,7 +39,7 @@ describe('Calculate Integration Flow', () => {
 		expect(quantity.unit).toBe('tablet');
 
 		// Step 3: Select optimal NDCs
-		const selections = selectOptimal(ndcList, quantity.total, 5);
+		const selections = selectOptimal(ndcList, quantity.total, quantity.unit, 5);
 		expect(selections.length).toBeGreaterThan(0);
 		expect(selections[0].ndc).toBe('12345-678-91'); // Exact match
 
@@ -61,7 +61,7 @@ describe('Calculate Integration Flow', () => {
 		if (!parsed) return;
 
 		const quantity = calculateQuantity(parsed, 30);
-		const selections = selectOptimal([], quantity.total, 5);
+		const selections = selectOptimal([], quantity.total, quantity.unit, 5);
 
 		expect(selections).toEqual([]);
 	});
@@ -86,7 +86,7 @@ describe('Calculate Integration Flow', () => {
 		if (!parsed) return;
 
 		const quantity = calculateQuantity(parsed, 30); // 60 total needed
-		const selections = selectOptimal(ndcList, quantity.total, 5);
+		const selections = selectOptimal(ndcList, quantity.total, quantity.unit, 5);
 
 		expect(selections.length).toBeGreaterThan(0);
 
@@ -113,7 +113,7 @@ describe('Calculate Integration Flow', () => {
 		if (!parsed) return;
 
 		const quantity = calculateQuantity(parsed, 45); // 90 total
-		const selections = selectOptimal(ndcList, quantity.total, 5);
+		const selections = selectOptimal(ndcList, quantity.total, quantity.unit, 5);
 
 		// Should have multi-pack option
 		const multiPack = selections.find((s) => s.packageCount && s.packageCount > 1);

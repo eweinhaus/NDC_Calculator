@@ -291,29 +291,35 @@ export function selectOptimal(
 	// If a preferred NDC is specified, boost its score significantly
 	// This ensures user-specified NDCs are strongly prioritized
 	if (preferredNdc) {
-		const normalizedPreferred = preferredNdc.trim().replace(/\s/g, '');
+		// Normalize preferred NDC: remove spaces and dashes for comparison
+		const normalizedPreferred = preferredNdc.trim().replace(/\s/g, '').replace(/-/g, '');
 		for (const candidate of candidates) {
-			const normalizedCandidate = candidate.ndc.trim().replace(/\s/g, '');
-			// Check if this candidate matches the preferred NDC (with or without dashes)
-			if (normalizedCandidate === normalizedPreferred || 
-			    normalizedCandidate.replace(/-/g, '') === normalizedPreferred.replace(/-/g, '')) {
+			// Normalize candidate NDC: remove spaces and dashes for comparison
+			const normalizedCandidate = candidate.ndc.trim().replace(/\s/g, '').replace(/-/g, '');
+			// Check if this candidate matches the preferred NDC (handles all format variations)
+			if (normalizedCandidate === normalizedPreferred) {
 				const originalScore = candidate.matchScore;
 				// Boost by 20 points to ensure it's preferred over other similar options
-				// This puts it ahead of other NDCs with similar packaging
-				candidate.matchScore = Math.min(100, candidate.matchScore + 20);
+				// Remove score cap to allow scores > 100 for preferred NDCs
+				candidate.matchScore = candidate.matchScore + 20;
 				logger.debug(`Boosted score for preferred NDC: ${candidate.ndc}`, {
 					originalScore,
 					boostedScore: candidate.matchScore,
 					preferredNdc,
 					boost: 20
 				});
-				break;
+				// Don't break - boost ALL candidates from preferred NDC (single-pack and multi-pack)
 			}
 		}
 	}
 
-	// Rank by match score (descending)
-	candidates.sort((a, b) => b.matchScore - a.matchScore);
+	// Rank by match score (descending), with stable sort for preferred NDCs
+	// When scores are equal, preferred NDCs (score > 100) will naturally rank first
+	candidates.sort((a, b) => {
+		const scoreDiff = b.matchScore - a.matchScore;
+		// If scores are equal, maintain relative order (stable sort)
+		return scoreDiff !== 0 ? scoreDiff : 0;
+	});
 
 	// Return top results
 	const results = candidates.slice(0, maxResults);
