@@ -63,6 +63,15 @@ export const UNIT_PATTERNS: UnitPattern[] = [
 	// Actuations (inhalers)
 	{ pattern: /\bactuations?\b/i, normalized: 'actuation' },
 	{ pattern: /\bpuffs?\b/i, normalized: 'actuation' },
+	{ pattern: /\bsprays?\b/i, normalized: 'actuation' },
+	// Liquids with concentration (e.g., "5mg/mL")
+	{ pattern: /\b(\d+(?:\.\d+)?)\s*mg\s*\/\s*(\d+(?:\.\d+)?)\s*ml\b/i, normalized: 'mL' },
+	{ pattern: /\b(\d+(?:\.\d+)?)\s*mg\s*per\s*(\d+(?:\.\d+)?)\s*ml\b/i, normalized: 'mL' },
+	// Insulin-specific patterns
+	{ pattern: /\bu-?(\d+)\b/i, normalized: 'unit' }, // U-100, U-200
+	{ pattern: /\b(\d+(?:\.\d+)?)\s*units?\s*\/\s*ml\b/i, normalized: 'unit' },
+	// Inhaler capacity patterns
+	{ pattern: /\b(\d+)\s*actuations?\s*per\s*(?:canister|inhaler|device)\b/i, normalized: 'actuation' },
 ];
 
 /**
@@ -326,6 +335,70 @@ const SIG_PATTERNS_RAW: SigPattern[] = [
 		dosageGroup: 1,
 		unitGroup: 2,
 		frequencyGroup: 0, // Fixed frequency = 0 (PRN)
+	},
+	// Special Dosage Forms - Higher priority for specific forms
+	// Pattern 18: "Inject X units subcutaneously [frequency]" - Insulin
+	{
+		pattern: /inject\s+(\d+(?:\.\d+)?)\s*units?\s+(?:subcutaneously|sc|subq)\s+(.+?)/i,
+		name: 'inject_units_subq_frequency',
+		priority: 11,
+		dosageGroup: 1,
+		unitGroup: 0, // Fixed: 'unit'
+		frequencyGroup: 2,
+	},
+	// Pattern 19: "X units subcutaneously [frequency]" - Insulin (without "Inject")
+	{
+		pattern: /(\d+(?:\.\d+)?)\s*units?\s+(?:subcutaneously|sc|subq)\s+(.+?)/i,
+		name: 'units_subq_frequency',
+		priority: 10,
+		dosageGroup: 1,
+		unitGroup: 0, // Fixed: 'unit'
+		frequencyGroup: 2,
+	},
+	// Pattern 20: "Inhale X puffs [frequency]" - Inhaler
+	{
+		pattern: /inhale\s+(\d+)\s*(?:puffs?|actuations?)\s+(.+?)/i,
+		name: 'inhale_puffs_frequency',
+		priority: 11,
+		dosageGroup: 1,
+		unitGroup: 0, // Fixed: 'actuation'
+		frequencyGroup: 2,
+	},
+	// Pattern 21: "X puffs [frequency] daily" - Inhaler (without "Inhale")
+	{
+		pattern: /(\d+)\s*(?:puffs?|actuations?)\s+(?:twice|once|three\s+times|four\s+times)\s+daily/i,
+		name: 'puffs_frequency_daily',
+		priority: 10,
+		dosageGroup: 1,
+		unitGroup: 0, // Fixed: 'actuation'
+		frequencyGroup: 0, // Extract from pattern
+	},
+	// Pattern 22: "Take X mL by mouth [frequency]" - Liquid
+	{
+		pattern: /take\s+(\d+(?:\.\d+)?)\s*ml\s+(?:by\s+mouth|orally|po)\s+(.+?)/i,
+		name: 'take_ml_frequency',
+		priority: 10,
+		dosageGroup: 1,
+		unitGroup: 0, // Fixed: 'mL'
+		frequencyGroup: 2,
+	},
+	// Pattern 23: "Take X mL every X hours" - Liquid
+	{
+		pattern: /take\s+(\d+(?:\.\d+)?)\s*ml\s+every\s+(\d+)\s+hours?/i,
+		name: 'take_ml_every_hours',
+		priority: 10,
+		dosageGroup: 1,
+		unitGroup: 0, // Fixed: 'mL'
+		frequencyGroup: 2,
+	},
+	// Pattern 24: "X mL [frequency]" - Liquid (without "Take")
+	{
+		pattern: /(\d+(?:\.\d+)?)\s*ml\s+(?:twice|once|three\s+times|four\s+times)\s+daily/i,
+		name: 'ml_frequency_daily',
+		priority: 9,
+		dosageGroup: 1,
+		unitGroup: 0, // Fixed: 'mL'
+		frequencyGroup: 0, // Extract from pattern
 	},
 ];
 

@@ -451,7 +451,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			ndcCount: activeNdcs.length,
 			preferredNdc 
 		});
-		const selections = selectOptimal(activeNdcs, quantity.total, 5, preferredNdc);
+		const selections = selectOptimal(activeNdcs, quantity.total, quantity.unit, 5, preferredNdc);
 
 		if (selections.length === 0) {
 			return json<CalculationResponse>({

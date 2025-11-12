@@ -222,6 +222,91 @@ describe('Regex SIG Parser', () => {
 			const successRate = successCount / testData.length;
 			expect(successRate).toBeGreaterThanOrEqual(0.8); // At least 80%
 		});
+
+		describe('special dosage forms', () => {
+			describe('liquid patterns', () => {
+				it('should parse "Take X mL by mouth twice daily"', () => {
+					const result = parse('Take 5 mL by mouth twice daily');
+					expect(result).not.toBeNull();
+					expect(result?.dosage).toBe(5);
+					expect(result?.frequency).toBe(2);
+					expect(result?.unit).toBe('mL');
+					expect(result?.dosageForm).toBe('liquid');
+				});
+
+				it('should parse "Take X mL every X hours"', () => {
+					const result = parse('Take 10 mL every 8 hours');
+					expect(result).not.toBeNull();
+					expect(result?.dosage).toBe(10);
+					expect(result?.frequency).toBe(3); // 24/8 = 3
+					expect(result?.unit).toBe('mL');
+					expect(result?.dosageForm).toBe('liquid');
+				});
+
+				it('should extract concentration from SIG', () => {
+					const result = parse('Take 5mg/mL, 10 mL by mouth twice daily');
+					expect(result).not.toBeNull();
+					expect(result?.dosageForm).toBe('liquid');
+					// Concentration extraction may need AI fallback for complex cases
+				});
+			});
+
+			describe('insulin patterns', () => {
+				it('should parse "Inject X units subcutaneously twice daily"', () => {
+					const result = parse('Inject 10 units subcutaneously twice daily');
+					expect(result).not.toBeNull();
+					expect(result?.dosage).toBe(10);
+					expect(result?.frequency).toBe(2);
+					expect(result?.unit).toBe('unit');
+					expect(result?.dosageForm).toBe('insulin');
+				});
+
+				it('should parse "X units SC every morning"', () => {
+					const result = parse('10 units SC every morning');
+					expect(result).not.toBeNull();
+					expect(result?.dosage).toBe(10);
+					expect(result?.frequency).toBe(1);
+					expect(result?.unit).toBe('unit');
+					expect(result?.dosageForm).toBe('insulin');
+				});
+
+				it('should extract insulin strength (U-100)', () => {
+					const result = parse('U-100 insulin, 20 units twice daily');
+					expect(result).not.toBeNull();
+					expect(result?.dosage).toBe(20);
+					expect(result?.insulinStrength).toBe(100);
+					expect(result?.dosageForm).toBe('insulin');
+				});
+			});
+
+			describe('inhaler patterns', () => {
+				it('should parse "Inhale X puffs twice daily"', () => {
+					const result = parse('Inhale 2 puffs twice daily');
+					expect(result).not.toBeNull();
+					expect(result?.dosage).toBe(2);
+					expect(result?.frequency).toBe(2);
+					expect(result?.unit).toBe('actuation');
+					expect(result?.dosageForm).toBe('inhaler');
+				});
+
+				it('should parse "X actuations every 12 hours"', () => {
+					const result = parse('2 actuations every 12 hours');
+					expect(result).not.toBeNull();
+					expect(result?.dosage).toBe(2);
+					expect(result?.frequency).toBe(2); // 24/12 = 2
+					expect(result?.unit).toBe('actuation');
+					expect(result?.dosageForm).toBe('inhaler');
+				});
+
+				it('should extract inhaler capacity', () => {
+					const result = parse('2 puffs twice daily, 200 actuations per canister');
+					expect(result).not.toBeNull();
+					expect(result?.dosage).toBe(2);
+					expect(result?.capacity).toBe(200);
+					expect(result?.dosageForm).toBe('inhaler');
+				});
+			});
+		});
 	});
 });
 

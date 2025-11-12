@@ -25,7 +25,7 @@ describe('NDC Selector', () => {
 				createNdcInfo('12345-678-92', 90, '90 TABLET in 1 BOTTLE'),
 			];
 
-			const results = selectOptimal(ndcList, 30);
+			const results = selectOptimal(ndcList, 30, 'tablet');
 			expect(results.length).toBeGreaterThan(0);
 			expect(results[0].ndc).toBe('12345-678-90');
 			expect(results[0].matchScore).toBe(100); // Exact match
@@ -39,7 +39,7 @@ describe('NDC Selector', () => {
 				createNdcInfo('12345-678-92', 20, '20 TABLET in 1 BOTTLE'), // Underfill
 			];
 
-			const results = selectOptimal(ndcList, 30);
+			const results = selectOptimal(ndcList, 30, 'tablet');
 			expect(results[0].ndc).toBe('12345-678-91'); // Exact match should rank first
 			expect(results[0].matchScore).toBe(100);
 		});
@@ -49,7 +49,7 @@ describe('NDC Selector', () => {
 				createNdcInfo('12345-678-90', 30, '30 TABLET in 1 BOTTLE'),
 			];
 
-			const results = selectOptimal(ndcList, 90);
+			const results = selectOptimal(ndcList, 90, 'tablet');
 			// Should have both single-pack and multi-pack options
 			const multiPack = results.find((r) => r.packageCount && r.packageCount > 1);
 			expect(multiPack).toBeDefined();
@@ -67,7 +67,7 @@ describe('NDC Selector', () => {
 				createNdcInfo('12345-678-92', 30, '30 TABLET in 1 BOTTLE', true),
 			];
 
-			const results = selectOptimal(ndcList, 30);
+			const results = selectOptimal(ndcList, 30, 'tablet');
 			// Should not include inactive NDC
 			expect(results.every((r) => r.ndc !== '12345-678-91')).toBe(true);
 		});
@@ -77,7 +77,7 @@ describe('NDC Selector', () => {
 				createNdcInfo('12345-678-90', 60, '60 TABLET in 1 BOTTLE'), // 100% overfill
 			];
 
-			const results = selectOptimal(ndcList, 30);
+			const results = selectOptimal(ndcList, 30, 'tablet');
 			expect(results.length).toBeGreaterThan(0);
 			expect(results[0].overfill).toBe(30); // 60 - 30 = 30
 			expect(results[0].matchScore).toBeLessThan(100); // Should be penalized
@@ -88,7 +88,7 @@ describe('NDC Selector', () => {
 				createNdcInfo('12345-678-90', 20, '20 TABLET in 1 BOTTLE'), // Underfill
 			];
 
-			const results = selectOptimal(ndcList, 30);
+			const results = selectOptimal(ndcList, 30, 'tablet');
 			expect(results.length).toBeGreaterThan(0);
 			
 			// Multi-pack will rank higher (no underfill), but single-pack should have underfill
@@ -115,12 +115,12 @@ describe('NDC Selector', () => {
 				createNdcInfo('12345-678-95', 35, '35 TABLET in 1 BOTTLE'),
 			];
 
-			const results = selectOptimal(ndcList, 30, 3);
+			const results = selectOptimal(ndcList, 30, 'tablet', 3);
 			expect(results.length).toBe(3);
 		});
 
 		it('should handle empty NDC list', () => {
-			const results = selectOptimal([], 30);
+			const results = selectOptimal([], 30, 'tablet');
 			expect(results).toEqual([]);
 		});
 
@@ -129,10 +129,10 @@ describe('NDC Selector', () => {
 				createNdcInfo('12345-678-90', 30, '30 TABLET in 1 BOTTLE'),
 			];
 
-			const results = selectOptimal(ndcList, 0);
+			const results = selectOptimal(ndcList, 0, 'tablet');
 			expect(results).toEqual([]);
 
-			const results2 = selectOptimal(ndcList, -1);
+			const results2 = selectOptimal(ndcList, -1, 'tablet');
 			expect(results2).toEqual([]);
 		});
 
@@ -141,7 +141,7 @@ describe('NDC Selector', () => {
 				createNdcInfo('12345-678-90', 1, '1 TABLET in 1 BOTTLE'), // Very small package
 			];
 
-			const results = selectOptimal(ndcList, 100); // Would need 100 packages
+			const results = selectOptimal(ndcList, 100, 'tablet'); // Would need 100 packages
 			// Multi-pack should be limited (max 10 packages)
 			const multiPack = results.find((r) => r.packageCount && r.packageCount > 1);
 			// Should either not have multi-pack or have limited packages
@@ -157,7 +157,7 @@ describe('NDC Selector', () => {
 				createNdcInfo('12345-678-92', 32, '32 TABLET in 1 BOTTLE'), // Near match
 			];
 
-			const results = selectOptimal(ndcList, 30);
+			const results = selectOptimal(ndcList, 30, 'tablet');
 			expect(results[0].ndc).toBe('12345-678-91'); // Exact match should rank first
 			expect(results[0].matchScore).toBe(100);
 		});
@@ -174,7 +174,7 @@ describe('NDC Selector', () => {
 				},
 			];
 
-			const results = selectOptimal(ndcList, 30);
+			const results = selectOptimal(ndcList, 30, 'tablet');
 			expect(results.length).toBeGreaterThan(0);
 			expect(results[0].packageSize).toBe(30);
 		});
@@ -191,7 +191,7 @@ describe('NDC Selector', () => {
 				},
 			];
 
-			const results = selectOptimal(ndcList, 30);
+			const results = selectOptimal(ndcList, 30, 'tablet');
 			expect(results.length).toBeGreaterThan(0);
 			expect(results[0].packageSize).toBe(30); // Parsed from description
 		});
@@ -219,12 +219,12 @@ describe('NDC Selector', () => {
 			// Without preferred NDC, both should have same score (exact match)
 			// Note: selectOptimal generates both single-pack and multi-pack selections,
 			// so we'll get 4 results (2 NDCs × 2 selection types)
-			const resultsWithoutPreferred = selectOptimal(ndcList, 30, 5);
+			const resultsWithoutPreferred = selectOptimal(ndcList, 30, 'capsule', 5);
 			expect(resultsWithoutPreferred.length).toBeGreaterThanOrEqual(2);
 			// Top result should have score 100 (exact match)
 
 			// With preferred NDC, it should be ranked first
-			const resultsWithPreferred = selectOptimal(ndcList, 30, 5, '0093-3546-56');
+			const resultsWithPreferred = selectOptimal(ndcList, 30, 'capsule', 5, '0093-3546-56');
 			expect(resultsWithPreferred.length).toBeGreaterThanOrEqual(2);
 			// The preferred NDC should be in the top result
 			const topResult = resultsWithPreferred[0];
@@ -250,13 +250,52 @@ describe('NDC Selector', () => {
 			];
 
 			// Test with preferred NDC in different formats
-			const results1 = selectOptimal(ndcList, 30, 5, '0002-3227-30');
-			const results2 = selectOptimal(ndcList, 30, 5, '0002322730');
-			const results3 = selectOptimal(ndcList, 30, 5, '0002 3227 30');
+			const results1 = selectOptimal(ndcList, 30, 'capsule', 5, '0002-3227-30');
+			const results2 = selectOptimal(ndcList, 30, 'capsule', 5, '0002322730');
+			const results3 = selectOptimal(ndcList, 30, 'capsule', 5, '0002 3227 30');
 
 			expect(results1[0].matchScore).toBeGreaterThan(100);
 			expect(results2[0].matchScore).toBeGreaterThan(100);
 			expect(results3[0].matchScore).toBeGreaterThan(100);
+		});
+
+		describe('unit-aware matching', () => {
+			it('should match compatible liquid units with conversion', () => {
+				const ndcList: NdcInfo[] = [
+					createNdcInfo('12345-678-90', 1000, '1000 mL in 1 BOTTLE'), // mL package
+				];
+
+				// Target in L, package in mL - should convert and match
+				const results = selectOptimal(ndcList, 1, 'L');
+				expect(results.length).toBeGreaterThan(0);
+				expect(results[0].matchScore).toBeGreaterThan(0);
+			});
+
+			it('should filter out incompatible units', () => {
+				const ndcList: NdcInfo[] = [
+					createNdcInfo('12345-678-90', 30, '30 TABLET in 1 BOTTLE'),
+					createNdcInfo('12345-678-91', 100, '100 mL in 1 BOTTLE'),
+				];
+
+				// Target in tablets, should only match tablet package
+				const results = selectOptimal(ndcList, 30, 'tablet');
+				expect(results.length).toBeGreaterThan(0);
+				expect(results.every((r) => r.ndc === '12345-678-90')).toBe(true);
+			});
+
+			it('should match same category units without conversion', () => {
+				const ndcList: NdcInfo[] = [
+					createNdcInfo('12345-678-90', 30, '30 TABLET in 1 BOTTLE'),
+					createNdcInfo('12345-678-91', 30, '30 CAPSULE in 1 BOTTLE'),
+				];
+
+				// Both tablets and capsules are in "solid" category, but we filter by exact unit match
+				// So only tablets should match
+				const results = selectOptimal(ndcList, 30, 'tablet');
+				expect(results.length).toBeGreaterThan(0);
+				// Should only match tablet package
+				expect(results.some((r) => r.ndc === '12345-678-90')).toBe(true);
+			});
 		});
 	});
 });

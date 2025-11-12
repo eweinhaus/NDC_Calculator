@@ -184,6 +184,114 @@ describe('Quantity Calculator', () => {
 				expect(result.total).toBe(testCase.expected);
 			}
 		});
+
+		describe('special dosage forms', () => {
+			describe('liquids with concentration', () => {
+				it('should calculate liquid quantity with concentration', () => {
+					const parsedSig: ParsedSig = {
+						dosage: 5, // 5mg
+						frequency: 2,
+						unit: 'mg',
+						confidence: 0.9,
+						dosageForm: 'liquid',
+						concentration: {
+							amount: 5, // 5mg
+							unit: 'mg',
+							volume: 1, // 1mL
+							volumeUnit: 'mL',
+						},
+					};
+
+					const result = calculate(parsedSig, 30);
+					// Volume per dose: 5mg / 5mg/mL = 1mL
+					// Daily volume: 1mL × 2 = 2mL
+					// Total: 2mL × 30 = 60mL
+					expect(result.total).toBe(60);
+					expect(result.unit).toBe('mL');
+				});
+
+				it('should handle liquid without concentration (fallback)', () => {
+					const parsedSig: ParsedSig = {
+						dosage: 5,
+						frequency: 2,
+						unit: 'mL',
+						confidence: 0.9,
+						dosageForm: 'liquid',
+					};
+
+					const result = calculate(parsedSig, 30);
+					// Normal calculation: (5 × 2) × 30 = 300
+					expect(result.total).toBe(300);
+					expect(result.unit).toBe('mL');
+				});
+			});
+
+			describe('inhalers with capacity', () => {
+				it('should calculate inhaler quantity with capacity', () => {
+					const parsedSig: ParsedSig = {
+						dosage: 2,
+						frequency: 2,
+						unit: 'actuation',
+						confidence: 0.9,
+						dosageForm: 'inhaler',
+						capacity: 200, // 200 actuations per canister
+					};
+
+					const result = calculate(parsedSig, 30);
+					// Total actuations: (2 × 2) × 30 = 120
+					// Canisters needed: ceil(120 / 200) = 1
+					expect(result.total).toBe(120);
+					expect(result.unit).toBe('actuation');
+				});
+
+				it('should calculate canisters needed for large quantity', () => {
+					const parsedSig: ParsedSig = {
+						dosage: 2,
+						frequency: 2,
+						unit: 'actuation',
+						confidence: 0.9,
+						dosageForm: 'inhaler',
+						capacity: 72, // 72 actuations per canister
+					};
+
+					const result = calculate(parsedSig, 30);
+					// Total actuations: (2 × 2) × 30 = 120
+					// Canisters needed: ceil(120 / 72) = 2
+					expect(result.total).toBe(120);
+					expect(result.unit).toBe('actuation');
+				});
+
+				it('should handle inhaler without capacity (fallback)', () => {
+					const parsedSig: ParsedSig = {
+						dosage: 2,
+						frequency: 2,
+						unit: 'actuation',
+						confidence: 0.9,
+						dosageForm: 'inhaler',
+					};
+
+					const result = calculate(parsedSig, 30);
+					// Normal calculation: (2 × 2) × 30 = 120
+					expect(result.total).toBe(120);
+					expect(result.unit).toBe('actuation');
+				});
+			});
+
+			describe('backward compatibility', () => {
+				it('should work with existing ParsedSig (no special form fields)', () => {
+					const parsedSig: ParsedSig = {
+						dosage: 1,
+						frequency: 2,
+						unit: 'tablet',
+						confidence: 0.9,
+					};
+
+					const result = calculate(parsedSig, 30);
+					expect(result.total).toBe(60);
+					expect(result.unit).toBe('tablet');
+				});
+			});
+		});
 	});
 });
 

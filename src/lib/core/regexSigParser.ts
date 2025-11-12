@@ -3,7 +3,7 @@
  * Primary parser that handles 80%+ of common prescription patterns.
  */
 
-import { ParsedSig } from '../types/sig';
+import { ParsedSig, Concentration } from '../types/sig';
 import {
 	SIG_PATTERNS,
 	UNIT_PATTERNS,
@@ -52,13 +52,127 @@ function extractDosage(sig: string, match: RegExpMatchArray, dosageGroup?: numbe
 
 /**
  * Extracts unit from SIG text
+ * Handles patterns with fixed units (unitGroup: 0)
  */
-function extractUnit(sig: string): string | null {
+function extractUnit(sig: string, pattern?: SigPattern): string | null {
+	// Check if pattern has fixed unit (unitGroup: 0)
+	if (pattern && pattern.unitGroup === 0) {
+		// Extract from pattern name or use fixed unit based on pattern
+		if (pattern.name.includes('ml') || pattern.name.includes('liquid')) {
+			return 'mL';
+		}
+		if (pattern.name.includes('unit') || pattern.name.includes('insulin') || pattern.name.includes('subq') || pattern.name.includes('sc')) {
+			return 'unit';
+		}
+		if (pattern.name.includes('puff') || pattern.name.includes('actuation') || pattern.name.includes('inhale')) {
+			return 'actuation';
+		}
+	}
+
+	// Try unit patterns
 	for (const unitPattern of UNIT_PATTERNS) {
 		if (unitPattern.pattern.test(sig)) {
 			return unitPattern.normalized;
 		}
 	}
+	return null;
+}
+
+/**
+ * Detects dosage form from unit and SIG text
+ */
+function detectDosageForm(unit: string, sig: string): 'tablet' | 'capsule' | 'liquid' | 'insulin' | 'inhaler' | 'other' {
+	const normalizedUnit = unit.toLowerCase();
+	const normalizedSig = sig.toLowerCase();
+
+	// Liquids
+	if (normalizedUnit === 'ml' || normalizedUnit === 'l' || normalizedUnit === 'milliliter' || normalizedUnit === 'liter') {
+		return 'liquid';
+	}
+
+	// Insulin
+	if (normalizedUnit === 'unit' || normalizedUnit === 'u' || normalizedUnit === 'iu') {
+		if (normalizedSig.includes('insulin') || normalizedSig.includes('subcutaneously') || normalizedSig.includes('sc') || normalizedSig.includes('subq')) {
+			return 'insulin';
+		}
+	}
+
+	// Inhalers - if unit is actuation/puff/spray, assume inhaler
+	if (normalizedUnit === 'actuation' || normalizedUnit === 'puff' || normalizedUnit === 'spray') {
+		return 'inhaler';
+	}
+
+	// Tablets
+	if (normalizedUnit === 'tablet' || normalizedUnit === 'tab') {
+		return 'tablet';
+	}
+
+	// Capsules
+	if (normalizedUnit === 'capsule' || normalizedUnit === 'cap') {
+		return 'capsule';
+	}
+
+	return 'other';
+}
+
+/**
+ * Extracts concentration from SIG text (e.g., "5mg/mL", "10mg per 5mL")
+ */
+function extractConcentration(sig: string): Concentration | null {
+	// Pattern: "Xmg/mL" or "Xmg per XmL"
+	const patterns = [
+		/(\d+(?:\.\d+)?)\s*mg\s*\/\s*(\d+(?:\.\d+)?)\s*ml/i,
+		/(\d+(?:\.\d+)?)\s*mg\s*per\s*(\d+(?:\.\d+)?)\s*ml/i,
+	];
+
+	for (const pattern of patterns) {
+		const match = sig.match(pattern);
+		if (match) {
+			const amount = parseFloat(match[1]);
+			const volume = parseFloat(match[2]);
+			if (amount > 0 && volume > 0) {
+				return {
+					amount,
+					unit: 'mg',
+					volume,
+					volumeUnit: 'mL',
+				};
+			}
+		}
+	}
+
+	return null;
+}
+
+/**
+ * Extracts insulin strength from SIG text (e.g., "U-100", "U-200")
+ */
+function extractInsulinStrength(sig: string): number | null {
+	const match = sig.match(/\bu-?(\d+)\b/i);
+	if (match) {
+		const strength = parseInt(match[1], 10);
+		return strength > 0 ? strength : null;
+	}
+	return null;
+}
+
+/**
+ * Extracts inhaler capacity from SIG text (e.g., "200 actuations per canister")
+ */
+function extractInhalerCapacity(sig: string): number | null {
+	const patterns = [
+		/(\d+)\s+actuations?\s+per\s+(?:canister|inhaler|device)/i,
+		/(\d+)\s+puffs?\s+per\s+(?:canister|inhaler|device)/i,
+	];
+
+	for (const pattern of patterns) {
+		const match = sig.match(pattern);
+		if (match) {
+			const capacity = parseInt(match[1], 10);
+			return capacity > 0 ? capacity : null;
+		}
+	}
+
 	return null;
 }
 
@@ -187,7 +301,7 @@ export function parse(sig: string): ParsedSig | null {
 
 		// Extract components
 		const dosage = extractDosage(normalized, match, pattern.dosageGroup);
-		const unit = extractUnit(normalized) || 'tablet'; // Default to tablet if not found
+		const unit = extractUnit(normalized, pattern) || 'tablet'; // Default to tablet if not found
 		const frequency = extractFrequency(normalized, match, pattern.frequencyGroup, pattern);
 
 		// Calculate confidence
@@ -212,12 +326,22 @@ export function parse(sig: string): ParsedSig | null {
 			continue;
 		}
 
-		// Return parsed SIG
+		// Extract special dosage form metadata
+		const dosageForm = detectDosageForm(unit, normalized);
+		const concentration = extractConcentration(normalized);
+		const insulinStrength = extractInsulinStrength(normalized);
+		const capacity = extractInhalerCapacity(normalized);
+
+		// Return parsed SIG with special form metadata
 		return {
 			dosage,
 			frequency: frequency ?? 0,
 			unit,
 			confidence,
+			dosageForm,
+			concentration: concentration || undefined,
+			insulinStrength: insulinStrength || undefined,
+			capacity: capacity || undefined,
 		};
 	}
 

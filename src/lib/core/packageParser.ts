@@ -4,6 +4,17 @@
  */
 
 /**
+ * Metadata for special dosage forms
+ */
+export interface PackageMetadata {
+	dosageForm?: 'liquid' | 'insulin' | 'inhaler';
+	insulinStrength?: number;  // U-100 = 100, U-200 = 200
+	volume?: number;           // Volume in mL/L
+	volumeUnit?: string;       // 'mL' or 'L'
+	concentration?: string;    // e.g., "5mg/mL"
+}
+
+/**
  * Parsed package description
  */
 export interface ParsedPackage {
@@ -11,6 +22,8 @@ export interface ParsedPackage {
 	unit: string;
 	packageCount?: number;
 	totalQuantity: number;
+	// Special dosage form metadata (optional for backward compatibility)
+	metadata?: PackageMetadata;
 }
 
 /**
@@ -61,6 +74,22 @@ export function parsePackageDescription(description: string): ParsedPackage | nu
 				return innerResult;
 			}
 		}
+	}
+
+	// Try special format parsers first (liquids, insulin, inhalers)
+	const liquidResult = parseLiquidFormat(trimmed);
+	if (liquidResult) {
+		return liquidResult;
+	}
+
+	const insulinResult = parseInsulinFormat(trimmed);
+	if (insulinResult) {
+		return insulinResult;
+	}
+
+	const inhalerResult = parseInhalerFormat(trimmed);
+	if (inhalerResult) {
+		return inhalerResult;
 	}
 
 	// Handle simple formats
@@ -129,6 +158,113 @@ function parseSimpleFormat(description: string): ParsedPackage | null {
 			unit,
 			totalQuantity: quantity
 		};
+	}
+
+	return null;
+}
+
+/**
+ * Parses liquid package formats
+ * Examples: "5 mL in 1 VIAL", "100 mL in 1 BOTTLE", "10 mL in 1 VIAL, MULTI-DOSE"
+ */
+function parseLiquidFormat(description: string): ParsedPackage | null {
+	// Pattern: "X mL/L in 1 CONTAINER"
+	const pattern = /(\d+(?:\.\d+)?)\s*(ml|l|milliliters?|liters?)\s+in\s+\d+\s+(?:vial|bottle|container|package)/i;
+	const match = description.match(pattern);
+	if (match) {
+		const quantity = parseFloat(match[1]);
+		const unitRaw = match[2].toLowerCase();
+		const unit = unitRaw === 'l' || unitRaw.startsWith('liter') ? 'L' : 'ML'; // Uppercase for consistency
+		
+		return {
+			quantity,
+			unit,
+			totalQuantity: quantity,
+			metadata: {
+				dosageForm: 'liquid',
+				volume: quantity,
+				volumeUnit: unit,
+			},
+		};
+	}
+	return null;
+}
+
+/**
+ * Parses insulin package formats
+ * Examples: "10 mL in 1 VIAL" (U-100 = 1000 units), "3 mL in 1 CARTRIDGE" (U-100 = 300 units)
+ * Handles U-100, U-200, etc.
+ */
+function parseInsulinFormat(description: string): ParsedPackage | null {
+	// Check for insulin strength (U-100, U-200, etc.)
+	const insulinMatch = description.match(/\bu-?(\d+)\b/i);
+	const strength = insulinMatch ? parseInt(insulinMatch[1], 10) : 100; // Default U-100
+
+		// Pattern: "X mL in 1 VIAL/CARTRIDGE" or "U-100, X mL in 1 VIAL"
+	// Match volume even if there's text before it (like "U-100,")
+		const volumeMatch = description.match(/(\d+(?:\.\d+)?)\s*(ml|l|milliliters?|liters?)\s+in\s+\d+\s+(?:vial|cartridge)/i);
+		if (volumeMatch) {
+			const volume = parseFloat(volumeMatch[1]);
+			const volumeUnit = volumeMatch[2].toLowerCase() === 'l' ? 'L' : 'mL';
+		
+		// Convert to units: volume (mL) × strength (units/mL)
+		// If volume is in L, convert to mL first
+		const volumeInMl = volumeUnit === 'L' ? volume * 1000 : volume;
+		const totalUnits = volumeInMl * strength;
+
+		return {
+			quantity: totalUnits,
+			unit: 'UNIT',
+			totalQuantity: totalUnits,
+			metadata: {
+				dosageForm: 'insulin',
+				insulinStrength: strength,
+				volume: volumeInMl,
+				volumeUnit: 'mL',
+			},
+		};
+	}
+
+	// Fallback: try to extract units directly
+	const unitsMatch = description.match(/(\d+)\s+units?\s+in\s+\d+\s+(?:vial|cartridge)/i);
+	if (unitsMatch) {
+		return {
+			quantity: parseInt(unitsMatch[1], 10),
+			unit: 'UNIT',
+			totalQuantity: parseInt(unitsMatch[1], 10),
+			metadata: {
+				dosageForm: 'insulin',
+				insulinStrength: strength,
+			},
+		};
+	}
+
+	return null;
+}
+
+/**
+ * Parses inhaler package formats
+ * Examples: "72 SPRAY, METERED in 1 BOTTLE, SPRAY", "200 ACTUATION in 1 CANISTER"
+ */
+function parseInhalerFormat(description: string): ParsedPackage | null {
+	// Patterns for inhalers
+	const patterns = [
+		/(\d+)\s+(?:spray|actuation|puff)(?:\s*,\s*metered)?\s+in\s+\d+\s+(?:bottle|canister|inhaler|device)/i,
+		/(\d+)\s+(?:actuations?|puffs?|sprays?)\s+per\s+(?:canister|inhaler|device)/i,
+	];
+
+	for (const pattern of patterns) {
+		const match = description.match(pattern);
+		if (match) {
+			return {
+				quantity: parseInt(match[1], 10),
+				unit: 'ACTUATION',
+				totalQuantity: parseInt(match[1], 10),
+				metadata: {
+					dosageForm: 'inhaler',
+				},
+			};
+		}
 	}
 
 	return null;

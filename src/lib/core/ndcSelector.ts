@@ -4,40 +4,91 @@
  */
 
 import { NdcInfo, NdcSelection } from '../types/ndc';
-import { parsePackageDescription } from './packageParser';
+import { parsePackageDescription, ParsedPackage } from './packageParser';
 import { logger } from '../utils/logger';
+import { normalizeUnitForMatching, convertLiquidVolume } from '../utils/unitConverter';
 
 /**
  * Parses package size from NDC info using package parser.
+ * Returns both the quantity and the parsed package info.
  */
-function parsePackageSize(ndcInfo: NdcInfo): number | null {
-	// Use packageSize if available (may already be parsed)
-	if (ndcInfo.packageSize && ndcInfo.packageSize > 0) {
-		return ndcInfo.packageSize;
-	}
-
+function parsePackageSize(ndcInfo: NdcInfo): { quantity: number; parsed: ParsedPackage } | null {
 	// Otherwise, try to parse from packageDescription
 	if (!ndcInfo.packageDescription) {
+		// Use packageSize if available (may already be parsed)
+		if (ndcInfo.packageSize && ndcInfo.packageSize > 0) {
+			return {
+				quantity: ndcInfo.packageSize,
+				parsed: {
+					quantity: ndcInfo.packageSize,
+					unit: 'UNKNOWN',
+					totalQuantity: ndcInfo.packageSize,
+				},
+			};
+		}
 		return null;
 	}
 
 	const parsed = parsePackageDescription(ndcInfo.packageDescription);
 	if (!parsed) {
+		// Fallback to packageSize if parsing fails
+		if (ndcInfo.packageSize && ndcInfo.packageSize > 0) {
+			return {
+				quantity: ndcInfo.packageSize,
+				parsed: {
+					quantity: ndcInfo.packageSize,
+					unit: 'UNKNOWN',
+					totalQuantity: ndcInfo.packageSize,
+				},
+			};
+		}
 		return null;
 	}
 
 	// Return quantity per package (not totalQuantity for multi-packs)
-	return parsed.quantity;
+	return {
+		quantity: parsed.quantity,
+		parsed,
+	};
 }
 
 /**
  * Calculates match score for NDC selection (0-100).
+ * Now unit-aware: checks unit compatibility and converts if needed.
  */
 function calculateMatchScore(
 	selection: NdcSelection,
-	targetQuantity: number
+	targetQuantity: number,
+	targetUnit: string,
+	parsedPackage?: ParsedPackage
 ): number {
-	const { totalQuantity, packageCount } = selection;
+	let { totalQuantity } = selection;
+	const { packageCount } = selection;
+
+	// Check unit compatibility
+	if (parsedPackage) {
+		const unitMatch = normalizeUnitForMatching(parsedPackage.unit, targetUnit);
+		
+		// If units can't match, return 0 (filter out)
+		if (!unitMatch.canMatch) {
+			return 0;
+		}
+
+		// If conversion needed, convert the quantity
+		if (unitMatch.conversionNeeded) {
+			const conversion = convertLiquidVolume(
+				totalQuantity,
+				parsedPackage.unit,
+				targetUnit
+			);
+			if (conversion) {
+				totalQuantity = conversion.converted;
+			} else {
+				// Conversion failed, can't match
+				return 0;
+			}
+		}
+	}
 
 	// Exact match
 	if (totalQuantity === targetQuantity) {
@@ -80,11 +131,20 @@ function calculateMatchScore(
  */
 function generateSinglePackSelection(
 	ndcInfo: NdcInfo,
-	targetQuantity: number
+	targetQuantity: number,
+	targetUnit: string
 ): NdcSelection | null {
-	const packageSize = parsePackageSize(ndcInfo);
-	if (!packageSize || packageSize <= 0) {
+	const packageInfo = parsePackageSize(ndcInfo);
+	if (!packageInfo || packageInfo.quantity <= 0) {
 		return null;
+	}
+
+	const { quantity: packageSize, parsed } = packageInfo;
+
+	// Check unit compatibility before creating selection
+	const unitMatch = normalizeUnitForMatching(parsed.unit, targetUnit);
+	if (!unitMatch.canMatch) {
+		return null; // Filter out incompatible units
 	}
 
 	const packageCount = 1;
@@ -104,8 +164,8 @@ function generateSinglePackSelection(
 		manufacturer: ndcInfo.manufacturer,
 	};
 
-	// Calculate match score
-	selection.matchScore = calculateMatchScore(selection, targetQuantity);
+	// Calculate match score with unit awareness
+	selection.matchScore = calculateMatchScore(selection, targetQuantity, targetUnit, parsed);
 
 	return selection;
 }
@@ -116,14 +176,34 @@ function generateSinglePackSelection(
 function generateMultiPackSelection(
 	ndcInfo: NdcInfo,
 	targetQuantity: number,
+	targetUnit: string,
 	maxPackages: number = 10
 ): NdcSelection | null {
-	const packageSize = parsePackageSize(ndcInfo);
-	if (!packageSize || packageSize <= 0) {
+	const packageInfo = parsePackageSize(ndcInfo);
+	if (!packageInfo || packageInfo.quantity <= 0) {
 		return null;
 	}
 
-	const packageCount = Math.ceil(targetQuantity / packageSize);
+	const { quantity: packageSize, parsed } = packageInfo;
+
+	// Check unit compatibility before creating selection
+	const unitMatch = normalizeUnitForMatching(parsed.unit, targetUnit);
+	if (!unitMatch.canMatch) {
+		return null; // Filter out incompatible units
+	}
+
+	// Convert target quantity if needed for calculation
+	let adjustedTargetQuantity = targetQuantity;
+	if (unitMatch.conversionNeeded) {
+		const conversion = convertLiquidVolume(targetQuantity, targetUnit, parsed.unit);
+		if (conversion) {
+			adjustedTargetQuantity = conversion.converted;
+		} else {
+			return null; // Conversion failed
+		}
+	}
+
+	const packageCount = Math.ceil(adjustedTargetQuantity / packageSize);
 	
 	// Skip if too many packages needed
 	if (packageCount > maxPackages) {
@@ -131,7 +211,7 @@ function generateMultiPackSelection(
 	}
 
 	const totalQuantity = packageCount * packageSize;
-	const overfill = totalQuantity - targetQuantity; // Always >= 0 for multi-pack
+	const overfill = totalQuantity - adjustedTargetQuantity; // Always >= 0 for multi-pack
 	const underfill = 0; // Multi-pack always meets or exceeds target
 
 	const selection: NdcSelection = {
@@ -146,8 +226,8 @@ function generateMultiPackSelection(
 		manufacturer: ndcInfo.manufacturer,
 	};
 
-	// Calculate match score
-	selection.matchScore = calculateMatchScore(selection, targetQuantity);
+	// Calculate match score with unit awareness (use original targetQuantity for scoring)
+	selection.matchScore = calculateMatchScore(selection, targetQuantity, targetUnit, parsed);
 
 	return selection;
 }
@@ -156,6 +236,7 @@ function generateMultiPackSelection(
  * Selects optimal NDCs based on target quantity.
  * @param ndcList - List of NDC information
  * @param targetQuantity - Target quantity to match
+ * @param targetUnit - Target unit (e.g., 'tablet', 'mL', 'unit', 'actuation')
  * @param maxResults - Maximum number of results to return (default: 5)
  * @param preferredNdc - Optional NDC to prioritize (e.g., user-provided input NDC)
  * @returns Array of NDC selections ranked by match score
@@ -163,6 +244,7 @@ function generateMultiPackSelection(
 export function selectOptimal(
 	ndcList: NdcInfo[],
 	targetQuantity: number,
+	targetUnit: string,
 	maxResults: number = 5,
 	preferredNdc?: string
 ): NdcSelection[] {
@@ -187,13 +269,13 @@ export function selectOptimal(
 		}
 
 		// Generate single-pack selection
-		const singlePack = generateSinglePackSelection(ndcInfo, targetQuantity);
+		const singlePack = generateSinglePackSelection(ndcInfo, targetQuantity, targetUnit);
 		if (singlePack) {
 			candidates.push(singlePack);
 		}
 
 		// Generate multi-pack selection
-		const multiPack = generateMultiPackSelection(ndcInfo, targetQuantity);
+		const multiPack = generateMultiPackSelection(ndcInfo, targetQuantity, targetUnit);
 		if (multiPack) {
 			candidates.push(multiPack);
 		}

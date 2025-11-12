@@ -28,8 +28,24 @@ function normalizeSig(sig: string): string {
  * Create prompt for SIG parsing.
  */
 function createSigPrompt(sig: string): string {
-	return `Parse the following prescription instruction (SIG) and return JSON:
-{dosage: number, frequency: number, unit: string, confidence: number}
+	return `Parse the following prescription instruction (SIG) and return JSON.
+
+Special dosage forms to recognize:
+- Liquids: Extract volume (mL/L) and concentration if present (e.g., "5mg/mL")
+- Insulin: Extract units and strength (U-100, U-200) if mentioned
+- Inhalers: Extract actuations/puffs and canister capacity if mentioned
+
+Return JSON format:
+{
+  "dosage": number,
+  "frequency": number,
+  "unit": string,
+  "confidence": number,
+  "dosageForm": "tablet" | "capsule" | "liquid" | "insulin" | "inhaler" | "other" (optional),
+  "concentration": { "amount": number, "unit": string, "volume": number, "volumeUnit": string } | null (optional),
+  "capacity": number | null (optional, for inhalers: actuations per canister),
+  "insulinStrength": number | null (optional, for insulin: U-100 = 100)
+}
 
 SIG: "${sig}"
 
@@ -107,12 +123,37 @@ function parseJsonFromContent(content: string): ParsedSig {
 		throw new Error('Invalid response: confidence must be between 0 and 1');
 	}
 
-	return {
+	// Build result with optional fields
+	const result: ParsedSig = {
 		dosage: parsed.dosage,
 		frequency: parsed.frequency,
 		unit: parsed.unit,
-		confidence: parsed.confidence
+		confidence: parsed.confidence,
 	};
+
+	// Add optional fields if present and valid
+	if (parsed.dosageForm) {
+		result.dosageForm = parsed.dosageForm;
+	}
+	if (parsed.concentration) {
+		// Validate concentration structure
+		if (
+			typeof parsed.concentration.amount === 'number' &&
+			typeof parsed.concentration.unit === 'string' &&
+			typeof parsed.concentration.volume === 'number' &&
+			typeof parsed.concentration.volumeUnit === 'string'
+		) {
+			result.concentration = parsed.concentration;
+		}
+	}
+	if (typeof parsed.capacity === 'number' && parsed.capacity > 0) {
+		result.capacity = parsed.capacity;
+	}
+	if (typeof parsed.insulinStrength === 'number' && parsed.insulinStrength > 0) {
+		result.insulinStrength = parsed.insulinStrength;
+	}
+
+	return result;
 }
 
 /**

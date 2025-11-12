@@ -10,7 +10,7 @@ import { logger } from '../utils/logger';
 /**
  * Valid units for SIG parsing
  */
-const VALID_UNITS = ['tablet', 'capsule', 'pill', 'mL', 'L', 'unit', 'actuation'];
+const VALID_UNITS = ['tablet', 'capsule', 'pill', 'mL', 'L', 'unit', 'actuation', 'ml', 'l', 'milliliter', 'liter', 'u', 'iu', 'puff', 'puffs', 'spray', 'sprays'];
 
 /**
  * Normalizes SIG text (same as regex parser)
@@ -60,6 +60,31 @@ function validateParsedSig(parsed: Partial<ParsedSig>): parsed is ParsedSig {
 		return false;
 	}
 	if (parsed.confidence < 0 || parsed.confidence > 1) {
+		return false;
+	}
+
+	// Validate optional concentration if present
+	if (parsed.concentration) {
+		const conc = parsed.concentration;
+		if (
+			typeof conc.amount !== 'number' ||
+			typeof conc.unit !== 'string' ||
+			typeof conc.volume !== 'number' ||
+			typeof conc.volumeUnit !== 'string' ||
+			conc.amount <= 0 ||
+			conc.volume <= 0
+		) {
+			return false;
+		}
+	}
+
+	// Validate optional capacity if present
+	if (parsed.capacity !== undefined && (typeof parsed.capacity !== 'number' || parsed.capacity <= 0)) {
+		return false;
+	}
+
+	// Validate optional insulinStrength if present
+	if (parsed.insulinStrength !== undefined && (typeof parsed.insulinStrength !== 'number' || parsed.insulinStrength <= 0)) {
 		return false;
 	}
 
