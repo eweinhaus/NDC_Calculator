@@ -52,9 +52,9 @@ function extractDosage(sig: string, match: RegExpMatchArray, dosageGroup?: numbe
 
 /**
  * Extracts unit from SIG text
- * Handles patterns with fixed units (unitGroup: 0)
+ * Handles patterns with fixed units (unitGroup: 0) and extracts from match groups (unitGroup > 0)
  */
-function extractUnit(sig: string, pattern?: SigPattern): string | null {
+function extractUnit(sig: string, pattern?: SigPattern, match?: RegExpMatchArray): string | null {
 	// Check if pattern has fixed unit (unitGroup: 0)
 	if (pattern && pattern.unitGroup === 0) {
 		// Extract from pattern name or use fixed unit based on pattern
@@ -67,6 +67,39 @@ function extractUnit(sig: string, pattern?: SigPattern): string | null {
 		if (pattern.name.includes('puff') || pattern.name.includes('actuation') || pattern.name.includes('inhale')) {
 			return 'actuation';
 		}
+	}
+
+	// Extract from match group if unitGroup > 0
+	if (pattern && pattern.unitGroup && pattern.unitGroup > 0 && match && match[pattern.unitGroup]) {
+		const unitRaw = match[pattern.unitGroup].trim();
+		// Normalize unit: convert to lowercase and map to standard forms
+		const unitLower = unitRaw.toLowerCase();
+		
+		// Map common unit variations to standard forms
+		if (unitLower === 'ml' || unitLower === 'milliliter' || unitLower === 'milliliters' || unitLower === 'millilitre' || unitLower === 'millilitres' || unitLower === 'cc' || unitLower === 'ccs') {
+			return 'mL';
+		}
+		if (unitLower === 'l' || unitLower === 'liter' || unitLower === 'liters' || unitLower === 'litre' || unitLower === 'litres') {
+			return 'L';
+		}
+		if (unitLower === 'tablet' || unitLower === 'tab' || unitLower === 'tablets' || unitLower === 'tabs') {
+			return 'tablet';
+		}
+		if (unitLower === 'capsule' || unitLower === 'cap' || unitLower === 'capsules' || unitLower === 'caps') {
+			return 'capsule';
+		}
+		if (unitLower === 'pill' || unitLower === 'pills') {
+			return 'pill';
+		}
+		if (unitLower === 'unit' || unitLower === 'units' || unitLower === 'u' || unitLower === 'iu') {
+			return 'unit';
+		}
+		if (unitLower === 'actuation' || unitLower === 'actuations' || unitLower === 'puff' || unitLower === 'puffs' || unitLower === 'spray' || unitLower === 'sprays') {
+			return 'actuation';
+		}
+		
+		// If no mapping found, return as-is (uppercase for consistency with other units)
+		return unitRaw.toUpperCase();
 	}
 
 	// Try unit patterns
@@ -320,8 +353,19 @@ export function parse(sig: string): ParsedSig | null {
 
 		// Extract components
 		const dosage = extractDosage(normalized, match, pattern.dosageGroup);
-		const unit = extractUnit(normalized, pattern) || 'tablet'; // Default to tablet if not found
+		const unit = extractUnit(normalized, pattern, match) || 'tablet'; // Default to tablet if not found
 		const frequency = extractFrequency(normalized, match, pattern.frequencyGroup, pattern);
+
+		console.error(`🔍 [SIG PARSER] Pattern "${pattern.name}" matched:`, {
+			sig: normalized,
+			dosage,
+			unit,
+			frequency,
+			dosageGroup: pattern.dosageGroup,
+			unitGroup: pattern.unitGroup,
+			frequencyGroup: pattern.frequencyGroup,
+			matchGroups: match.slice(1).map((g, i) => `[${i+1}]=${g}`).join(', ')
+		});
 
 		// Calculate confidence
 		const confidence = calculateConfidence(match, pattern, { dosage, frequency, unit });
@@ -351,8 +395,7 @@ export function parse(sig: string): ParsedSig | null {
 		const insulinStrength = extractInsulinStrength(normalized);
 		const capacity = extractInhalerCapacity(normalized);
 
-		// Return parsed SIG with special form metadata
-		return {
+		const parsedResult = {
 			dosage,
 			frequency: frequency ?? 0,
 			unit,
@@ -362,6 +405,11 @@ export function parse(sig: string): ParsedSig | null {
 			insulinStrength: insulinStrength || undefined,
 			capacity: capacity || undefined,
 		};
+
+		console.error(`✅ [SIG PARSER] Successfully parsed SIG:`, parsedResult);
+
+		// Return parsed SIG with special form metadata
+		return parsedResult;
 	}
 
 	// No pattern matched or all had low confidence

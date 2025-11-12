@@ -38,6 +38,17 @@ export function calculate(parsedSig: ParsedSig, daysSupply: number): QuantityRes
 	if (!parsedSig) {
 		throw new Error('parsedSig is required');
 	}
+
+	console.error(`🧮 [QUANTITY CALC] START:`, {
+		parsedSig: {
+			dosage: parsedSig.dosage,
+			frequency: parsedSig.frequency,
+			unit: parsedSig.unit,
+			dosageForm: parsedSig.dosageForm,
+			concentration: parsedSig.concentration
+		},
+		daysSupply
+	});
 	if (typeof daysSupply !== 'number' || daysSupply <= 0) {
 		throw new Error('daysSupply must be a positive number');
 	}
@@ -106,10 +117,21 @@ export function calculate(parsedSig: ParsedSig, daysSupply: number): QuantityRes
 	} else {
 		// Normal calculation: (dosage × frequency) × daysSupply
 		total = (parsedSig.dosage * parsedSig.frequency) * daysSupply;
+		console.error(`🧮 [QUANTITY CALC] Normal calculation: (${parsedSig.dosage} × ${parsedSig.frequency}) × ${daysSupply} = ${total}`);
 	}
 
 	// Round based on unit type
 	const roundedTotal = roundQuantity(total, unit);
+	
+	console.error(`🧮 [QUANTITY CALC] RESULT:`, {
+		total: roundedTotal,
+		unit,
+		calculation: {
+			dosage: parsedSig.dosage,
+			frequency: parsedSig.frequency === 0 ? 1 : parsedSig.frequency,
+			daysSupply
+		}
+	});
 
 	// Warn about very large quantities
 	if (daysSupply > 365) {

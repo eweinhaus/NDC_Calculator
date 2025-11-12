@@ -104,7 +104,7 @@ describe('parsePackageDescription', () => {
 			const result = parsePackageDescription('25 VIAL in 1 CARTON (80327-013-00)  / 5 mL in 1 VIAL');
 			expect(result).toEqual({
 				quantity: 5,
-				unit: 'ML',
+				unit: 'mL',
 				packageCount: 25,
 				totalQuantity: 125
 			});
@@ -125,7 +125,7 @@ describe('parsePackageDescription', () => {
 			const result = parsePackageDescription('35.5 mL in 1 BOTTLE');
 			expect(result).not.toBeNull();
 			expect(result?.quantity).toBe(35.5);
-			expect(result?.unit).toBe('ML');
+			expect(result?.unit).toBe('mL');
 			expect(result?.totalQuantity).toBe(35.5);
 			// May have metadata if parsed as liquid
 			if (result?.metadata) {
@@ -137,7 +137,7 @@ describe('parsePackageDescription', () => {
 			const result = parsePackageDescription('5 mL in 1 VIAL, MULTI-DOSE');
 			expect(result).not.toBeNull();
 			expect(result?.quantity).toBe(5);
-			expect(result?.unit).toBe('ML');
+			expect(result?.unit).toBe('mL');
 			expect(result?.totalQuantity).toBe(5);
 			// May have metadata if parsed as liquid
 			if (result?.metadata) {
@@ -197,10 +197,10 @@ describe('parsePackageDescription', () => {
 				const result = parsePackageDescription('5 mL in 1 VIAL');
 				expect(result).not.toBeNull();
 				expect(result?.quantity).toBe(5);
-				expect(result?.unit).toBe('ML');
+				expect(result?.unit).toBe('mL');
 				expect(result?.metadata?.dosageForm).toBe('liquid');
 				expect(result?.metadata?.volume).toBe(5);
-				expect(result?.metadata?.volumeUnit).toBe('ML');
+				expect(result?.metadata?.volumeUnit).toBe('mL');
 			});
 
 			it('should parse liquid format in liters', () => {
@@ -215,7 +215,7 @@ describe('parsePackageDescription', () => {
 				const result = parsePackageDescription('10 mL in 1 VIAL, MULTI-DOSE');
 				expect(result).not.toBeNull();
 				expect(result?.quantity).toBe(10);
-				expect(result?.unit).toBe('ML');
+				expect(result?.unit).toBe('mL');
 				expect(result?.metadata?.dosageForm).toBe('liquid');
 			});
 		});
@@ -242,7 +242,7 @@ describe('parsePackageDescription', () => {
 				} else {
 					// If parsed as liquid (which happens first), that's also valid
 					expect(result?.quantity).toBe(10);
-					expect(result?.unit).toBe('ML');
+					expect(result?.unit).toBe('mL');
 				}
 			});
 

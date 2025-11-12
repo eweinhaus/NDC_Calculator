@@ -110,7 +110,14 @@ function parseSimpleFormat(description: string): ParsedPackage | null {
 	if (multiPackMatch) {
 		const packageCount = parseInt(multiPackMatch[1], 10);
 		const perPackageQuantity = parseFloat(multiPackMatch[2]);
-		const unit = multiPackMatch[3].trim().toUpperCase();
+		const unitRaw = multiPackMatch[3].trim();
+		// Handle liquid units specially - return 'mL' instead of 'ML' for consistency
+		const unitLower = unitRaw.toLowerCase();
+		const unit = (unitLower === 'ml' || unitLower === 'milliliter' || unitLower === 'milliliters') 
+			? 'mL' 
+			: (unitLower === 'l' || unitLower === 'liter' || unitLower === 'liters')
+			? 'L'
+			: unitRaw.toUpperCase();
 		return {
 			quantity: perPackageQuantity,
 			unit,
@@ -125,7 +132,14 @@ function parseSimpleFormat(description: string): ParsedPackage | null {
 	const match1 = cleaned.match(pattern1);
 	if (match1) {
 		const quantity = parseFloat(match1[1]);
-		const unit = match1[2].trim().toUpperCase();
+		const unitRaw = match1[2].trim();
+		// Handle liquid units specially - return 'mL' instead of 'ML' for consistency
+		const unitLower = unitRaw.toLowerCase();
+		const unit = (unitLower === 'ml' || unitLower === 'milliliter' || unitLower === 'milliliters') 
+			? 'mL' 
+			: (unitLower === 'l' || unitLower === 'liter' || unitLower === 'liters')
+			? 'L'
+			: unitRaw.toUpperCase();
 
 		return {
 			quantity,
@@ -140,7 +154,14 @@ function parseSimpleFormat(description: string): ParsedPackage | null {
 	const match2 = cleaned.match(pattern2);
 	if (match2) {
 		const quantity = parseFloat(match2[1]);
-		const unit = match2[2].trim().toUpperCase();
+		const unitRaw = match2[2].trim();
+		// Handle liquid units specially - return 'mL' instead of 'ML' for consistency
+		const unitLower = unitRaw.toLowerCase();
+		const unit = (unitLower === 'ml' || unitLower === 'milliliter' || unitLower === 'milliliters') 
+			? 'mL' 
+			: (unitLower === 'l' || unitLower === 'liter' || unitLower === 'liters')
+			? 'L'
+			: unitRaw.toUpperCase();
 		return {
 			quantity,
 			unit,
@@ -154,7 +175,14 @@ function parseSimpleFormat(description: string): ParsedPackage | null {
 	const match3 = cleaned.match(pattern3);
 	if (match3) {
 		const quantity = parseFloat(match3[1]);
-		const unit = match3[2].trim().toUpperCase();
+		const unitRaw = match3[2].trim();
+		// Handle liquid units specially - return 'mL' instead of 'ML' for consistency
+		const unitLower = unitRaw.toLowerCase();
+		const unit = (unitLower === 'ml' || unitLower === 'milliliter' || unitLower === 'milliliters') 
+			? 'mL' 
+			: (unitLower === 'l' || unitLower === 'liter' || unitLower === 'liters')
+			? 'L'
+			: unitRaw.toUpperCase();
 		return {
 			quantity,
 			unit,
@@ -176,7 +204,7 @@ function parseLiquidFormat(description: string): ParsedPackage | null {
 	if (match) {
 		const quantity = parseFloat(match[1]);
 		const unitRaw = match[2].toLowerCase();
-		const unit = unitRaw === 'l' || unitRaw.startsWith('liter') ? 'L' : 'ML'; // Uppercase for consistency
+		const unit = unitRaw === 'l' || unitRaw.startsWith('liter') ? 'L' : 'mL'; // Use 'mL' (mixed case) for consistency with SIG parser
 		
 		return {
 			quantity,

@@ -358,12 +358,12 @@
 								Drug Name or NDC
 								<span class="text-red-500" aria-label="required">*</span>
 							</label>
-							<p class="text-sm text-gray-600 mb-1.5">Enter the medication name or NDC code (e.g., 00002-3227-30)</p>
+							<p class="text-sm text-gray-600 mb-1.5">Enter the medication name or NDC code (00002-3227-30)</p>
 							<Autocomplete
 								id="drugInput"
 								bind:value={drugInput}
 								label=""
-								placeholder="e.g., Lisinopril or 00002-3227-30"
+								placeholder="Lisinopril or 00002-3227-30"
 								required={true}
 								error={shouldShowError('drugInput') ? errors.drugInput : null}
 								on:input={(event) => {
@@ -396,7 +396,7 @@
 								type="text"
 								bind:value={sig}
 								on:blur={() => handleBlur('sig')}
-								placeholder="e.g., Take 1 tablet by mouth twice daily"
+								placeholder="Take 1 tablet by mouth twice daily"
 								class="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-primary focus:border-teal-primary focus:bg-offwhite-warm transition-all {shouldShowError('sig') ? 'border-red-500 focus:ring-red-500' : ''}"
 								aria-invalid={shouldShowError('sig') ? 'true' : 'false'}
 								aria-describedby={shouldShowError('sig') ? 'sig-error' : undefined}
@@ -427,7 +427,7 @@
 								on:blur={() => handleBlur('daysSupply')}
 								min="1"
 								max="365"
-								placeholder="e.g., 30"
+								placeholder="30"
 								class="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-primary focus:border-teal-primary focus:bg-offwhite-warm transition-all {shouldShowError('daysSupply') ? 'border-red-500 focus:ring-red-500' : ''}"
 								aria-invalid={shouldShowError('daysSupply') ? 'true' : 'false'}
 								aria-describedby={shouldShowError('daysSupply') ? 'daysSupply-error' : undefined}

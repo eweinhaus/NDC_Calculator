@@ -144,7 +144,9 @@ function generateSinglePackSelection(
 
 	// Check unit compatibility before creating selection
 	const unitMatch = normalizeUnitForMatching(parsed.unit, targetUnit);
+	console.error(`   🔍 [NDC SELECTOR] Single-pack unit match: "${parsed.unit}" vs "${targetUnit}" → canMatch=${unitMatch.canMatch}, conversionNeeded=${unitMatch.conversionNeeded}`);
 	if (!unitMatch.canMatch) {
+		console.error(`   ❌ [NDC SELECTOR] Single-pack units incompatible: "${parsed.unit}" vs "${targetUnit}"`);
 		return null; // Filter out incompatible units
 	}
 
@@ -189,7 +191,9 @@ function generateMultiPackSelection(
 
 	// Check unit compatibility before creating selection
 	const unitMatch = normalizeUnitForMatching(parsed.unit, targetUnit);
+	console.error(`   🔍 [NDC SELECTOR] Multi-pack unit match: "${parsed.unit}" vs "${targetUnit}" → canMatch=${unitMatch.canMatch}, conversionNeeded=${unitMatch.conversionNeeded}`);
 	if (!unitMatch.canMatch) {
+		console.error(`   ❌ [NDC SELECTOR] Multi-pack units incompatible: "${parsed.unit}" vs "${targetUnit}"`);
 		return null; // Filter out incompatible units
 	}
 
@@ -278,16 +282,22 @@ export function selectOptimal(
 			continue;
 		}
 
-		// Generate single-pack selection
+			// Generate single-pack selection
 		const singlePack = generateSinglePackSelection(ndcInfo, targetQuantity, targetUnit);
 		if (singlePack) {
+			console.error(`   📦 [NDC SELECTOR] Single-pack candidate: ${ndcInfo.ndc} → ${singlePack.totalQuantity}${targetUnit} (${singlePack.packageCount}×${singlePack.packageSize}, score=${singlePack.matchScore})`);
 			candidates.push(singlePack);
+		} else {
+			console.error(`   ❌ [NDC SELECTOR] Single-pack failed for ${ndcInfo.ndc} (package: ${ndcInfo.packageDescription})`);
 		}
 
 		// Generate multi-pack selection
 		const multiPack = generateMultiPackSelection(ndcInfo, targetQuantity, targetUnit);
 		if (multiPack) {
+			console.error(`   📦 [NDC SELECTOR] Multi-pack candidate: ${ndcInfo.ndc} → ${multiPack.totalQuantity}${targetUnit} (${multiPack.packageCount}×${multiPack.packageSize}, score=${multiPack.matchScore})`);
 			candidates.push(multiPack);
+		} else {
+			console.error(`   ❌ [NDC SELECTOR] Multi-pack failed for ${ndcInfo.ndc} (package: ${ndcInfo.packageDescription})`);
 		}
 		
 		processedCount++;
@@ -351,6 +361,10 @@ export function selectOptimal(
 
 	// Return top results
 	const results = candidates.slice(0, maxResults);
+
+	console.error(`🏆 [NDC SELECTOR] Top ${results.length} results:`, results.map((r, i) => 
+		`${i+1}. ${r.ndc}: ${r.totalQuantity}${targetUnit} (${r.packageCount || 1}×${r.packageSize}, score=${r.matchScore})`
+	).join('\n   '));
 
 	logger.debug(`Selected ${results.length} optimal NDCs from ${candidates.length} candidates`, {
 		targetQuantity,

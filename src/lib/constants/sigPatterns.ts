@@ -379,12 +379,12 @@ const SIG_PATTERNS_RAW: SigPattern[] = [
 	},
 	// Pattern 21: "X puffs [frequency] daily" - Inhaler (without "Inhale")
 	{
-		pattern: /(\d+)\s*(?:puffs?|actuations?)\s+(?:twice|once|three\s+times|four\s+times)\s+daily/i,
+		pattern: /(\d+)\s*(?:puffs?|actuations?)\s+((?:twice|once|three\s+times|four\s+times)\s+daily)/i,
 		name: 'puffs_frequency_daily',
 		priority: 10,
 		dosageGroup: 1,
 		unitGroup: 0, // Fixed: 'actuation'
-		frequencyGroup: 0, // Extract from pattern
+		frequencyGroup: 2, // Extract frequency text from regex group
 	},
 	// Pattern 22: "Take X mL by mouth [frequency]" - Liquid
 	{
@@ -406,12 +406,12 @@ const SIG_PATTERNS_RAW: SigPattern[] = [
 	},
 	// Pattern 24: "X mL [frequency]" - Liquid (without "Take")
 	{
-		pattern: /(\d+(?:\.\d+)?)\s*ml\s+(?:twice|once|three\s+times|four\s+times)\s+daily/i,
+		pattern: /(\d+(?:\.\d+)?)\s*ml\s+((?:twice|once|three\s+times|four\s+times)\s+daily)/i,
 		name: 'ml_frequency_daily',
 		priority: 9,
 		dosageGroup: 1,
 		unitGroup: 0, // Fixed: 'mL'
-		frequencyGroup: 0, // Extract from pattern
+		frequencyGroup: 2, // Extract frequency text from regex group
 	},
 ];
 
