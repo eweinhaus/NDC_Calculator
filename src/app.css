@@ -7,6 +7,29 @@
 		width: 100%;
 		max-width: 100%;
 		overflow-x: hidden;
+		background-color: #F7F2EA;
+	}
+}
+
+@layer utilities {
+	/* Smooth animations for layout transitions */
+	.animate-slide-layout {
+		transition: grid-template-columns 1200ms cubic-bezier(0.4, 0, 0.2, 1),
+		            gap 1200ms cubic-bezier(0.4, 0, 0.2, 1),
+		            max-width 1200ms cubic-bezier(0.4, 0, 0.2, 1);
+		will-change: grid-template-columns, gap, max-width;
+	}
+	
+	.animate-slide-form {
+		/* Grid layout handles positioning - no transform needed */
+		transition: opacity 1200ms cubic-bezier(0.4, 0, 0.2, 1);
+		will-change: opacity;
+	}
+
+	/* No animation needed - grid layout handles the smooth transition */
+	/* The slide-left class is kept for state tracking but doesn't apply any transform */
+	.slide-left {
+		/* Grid layout transition handles the positioning smoothly */
 	}
 }
 

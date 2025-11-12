@@ -280,7 +280,7 @@
 			on:focus={handleFocus}
 			on:blur={handleBlur}
 			on:keydown={handleKeyDown}
-			class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-primary focus:border-teal-primary transition-colors {error ? 'border-red-500 focus:ring-red-500' : ''}"
+			class="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-primary focus:border-teal-primary focus:bg-offwhite-warm transition-colors {error ? 'border-red-500 focus:ring-red-500' : ''}"
 			aria-invalid={error ? 'true' : 'false'}
 			aria-describedby={error ? `${id}-error` : undefined}
 			aria-autocomplete="list"
@@ -311,7 +311,7 @@
 			bind:this={dropdownElement}
 			id="{id}-suggestions"
 			role="listbox"
-			class="absolute z-50 w-full mt-1 bg-white border-2 border-gray-300 rounded-xl shadow-lg max-h-60 overflow-auto"
+			class="absolute z-50 w-full mt-1 bg-white border-2 border-red-600 rounded-md shadow-md max-h-60 overflow-auto"
 			aria-label={ariaLabel}
 		>
 			{#each suggestions as suggestion, index}
@@ -320,7 +320,7 @@
 					role="option"
 					tabindex="-1"
 					aria-selected={selectedIndex === index}
-					class="px-4 py-2 cursor-pointer transition-colors {selectedIndex === index ? 'bg-teal-soft-bg text-teal-dark' : 'hover:bg-gray-100 text-gray-900'}"
+					class="px-4 py-2 cursor-pointer transition-colors {selectedIndex === index ? 'bg-teal-primary/10 text-teal-dark' : 'hover:bg-teal-light/20 text-gray-900'}"
 					on:click={() => selectSuggestion(suggestion)}
 					on:keydown={(e) => {
 						if (e.key === 'Enter' || e.key === ' ') {

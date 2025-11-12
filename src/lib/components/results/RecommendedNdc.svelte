@@ -64,7 +64,7 @@
 
 <div
 	bind:this={containerElement}
-	class="bg-teal-primary rounded-2xl shadow-2xl mb-2 w-full flex flex-col {ndc.overfill > 0 ? 'p-3' : 'p-4'}"
+	class="bg-red-600 rounded-lg shadow-sm mb-2 w-full flex flex-col {ndc.overfill > 0 ? 'p-3' : 'p-4'}"
 	aria-label="Recommended NDC"
 >
 	<div class="flex items-start justify-between {ndc.overfill > 0 ? 'mb-2' : 'mb-3'}">
@@ -74,11 +74,11 @@
 			</svg>
 			Recommended NDC
 		</h3>
-		<span class="px-2 py-0.5 bg-white text-teal-primary text-xs font-bold rounded-full shadow-lg">Best Match</span>
+		<span class="px-2 py-0.5 bg-white text-red-600 text-xs font-bold rounded shadow-sm">Best Match</span>
 	</div>
 	
 	<!-- NDC Code - Hero Display -->
-	<div class="bg-white/10 backdrop-blur-sm rounded-xl border-2 border-white/20 {ndc.overfill > 0 ? 'p-2 mb-2' : 'p-3 mb-3'}">
+	<div class="bg-white/10 backdrop-blur-sm rounded-md border border-white/20 {ndc.overfill > 0 ? 'p-2 mb-2' : 'p-3 mb-3'}">
 		<span class="text-xs font-semibold text-white/90 uppercase tracking-wide block {ndc.overfill > 0 ? 'mb-1.5' : 'mb-2'}">NDC Code</span>
 		<div class="flex items-center justify-between gap-3 flex-wrap">
 			<div class="flex-1 min-w-0">
@@ -89,7 +89,7 @@
 					type="button"
 					on:click={handleCopy}
 					disabled={isCopying}
-					class="p-2.5 bg-white/20 hover:bg-white/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+					class="p-2.5 bg-white/20 hover:bg-white/30 rounded-md focus:outline-none focus:ring-1 focus:ring-white/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
 					aria-label="Copy NDC code"
 				>
 					<svg
@@ -114,26 +114,26 @@
 	<!-- Total Quantity, Package Size, and Packages - Shared Row -->
 	{#if ndc.packageCount && ndc.packageCount > 1}
 		<div class="grid grid-cols-3 gap-3 {ndc.overfill > 0 ? 'mb-2' : 'mb-3'}">
-			<div class="bg-white rounded-xl shadow-lg border-2 border-white/50 {ndc.overfill > 0 ? 'p-2' : 'p-3'}">
+			<div class="bg-white rounded-md shadow-sm border border-white/50 {ndc.overfill > 0 ? 'p-2' : 'p-3'}">
 				<span class="text-xs font-semibold text-gray-600 uppercase tracking-wide block {ndc.overfill > 0 ? 'mb-1' : 'mb-1.5'}">Total Quantity</span>
-				<span class="text-xl md:text-2xl font-extrabold text-teal-primary">{ndc.totalQuantity}</span>
+				<span class="text-xl md:text-2xl font-extrabold text-red-600">{ndc.totalQuantity}</span>
 			</div>
-			<div class="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 {ndc.overfill > 0 ? 'p-2' : 'p-3'}">
+			<div class="bg-white/10 backdrop-blur-sm rounded-md border border-white/20 {ndc.overfill > 0 ? 'p-2' : 'p-3'}">
 				<span class="text-xs font-semibold text-white/90 uppercase tracking-wide block {ndc.overfill > 0 ? 'mb-1' : 'mb-1.5'}">Package Size</span>
 				<span class="text-xl md:text-2xl font-bold text-white">{ndc.packageSize}</span>
 			</div>
-			<div class="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 {ndc.overfill > 0 ? 'p-2' : 'p-3'}">
+			<div class="bg-white/10 backdrop-blur-sm rounded-md border border-white/20 {ndc.overfill > 0 ? 'p-2' : 'p-3'}">
 				<span class="text-xs font-semibold text-white/90 uppercase tracking-wide block {ndc.overfill > 0 ? 'mb-1' : 'mb-1.5'}">Packages</span>
 				<span class="text-xl md:text-2xl font-bold text-white">{ndc.packageCount}</span>
 			</div>
 		</div>
 	{:else}
 		<div class="grid grid-cols-2 gap-3 {ndc.overfill > 0 ? 'mb-2' : 'mb-3'}">
-			<div class="bg-white rounded-xl shadow-lg border-2 border-white/50 {ndc.overfill > 0 ? 'p-2' : 'p-3'}">
+			<div class="bg-white rounded-md shadow-sm border border-white/50 {ndc.overfill > 0 ? 'p-2' : 'p-3'}">
 				<span class="text-xs font-semibold text-gray-600 uppercase tracking-wide block {ndc.overfill > 0 ? 'mb-1' : 'mb-1.5'}">Total Quantity</span>
-				<span class="text-xl md:text-2xl font-extrabold text-teal-primary">{ndc.totalQuantity}</span>
+				<span class="text-xl md:text-2xl font-extrabold text-red-600">{ndc.totalQuantity}</span>
 			</div>
-			<div class="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 {ndc.overfill > 0 ? 'p-2' : 'p-3'}">
+			<div class="bg-white/10 backdrop-blur-sm rounded-md border border-white/20 {ndc.overfill > 0 ? 'p-2' : 'p-3'}">
 				<span class="text-xs font-semibold text-white/90 uppercase tracking-wide block {ndc.overfill > 0 ? 'mb-1' : 'mb-1.5'}">Package Size</span>
 				<span class="text-xl md:text-2xl font-bold text-white">{ndc.packageSize}</span>
 			</div>
@@ -144,13 +144,13 @@
 	{#if ndc.packageDescription || ndc.manufacturer}
 		<div class="grid grid-cols-2 gap-3 {ndc.overfill > 0 ? 'mb-2' : 'mb-3'}">
 			{#if ndc.packageDescription}
-				<div class="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 {ndc.overfill > 0 ? 'p-2' : 'p-3'}">
+				<div class="bg-white/10 backdrop-blur-sm rounded-md border border-white/20 {ndc.overfill > 0 ? 'p-2' : 'p-3'}">
 					<span class="text-xs font-semibold text-white/90 uppercase tracking-wide block {ndc.overfill > 0 ? 'mb-1' : 'mb-1.5'}">Package</span>
 					<div class="text-xs text-white font-medium">{ndc.packageDescription}</div>
 				</div>
 			{/if}
 			{#if ndc.manufacturer}
-				<div class="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 {ndc.overfill > 0 ? 'p-2' : 'p-3'}">
+				<div class="bg-white/10 backdrop-blur-sm rounded-md border border-white/20 {ndc.overfill > 0 ? 'p-2' : 'p-3'}">
 					<span class="text-xs font-semibold text-white/90 uppercase tracking-wide block {ndc.overfill > 0 ? 'mb-1' : 'mb-1.5'}">Manufacturer</span>
 					<span class="text-xs font-medium text-white">{ndc.manufacturer}</span>
 				</div>
@@ -161,15 +161,15 @@
 	{#if ndc.overfill > 0 || ndc.underfill > 0}
 		<div class="pt-3 border-t-2 border-white/20 space-y-2">
 			{#if ndc.overfill > 0}
-				<div class="flex items-center justify-between bg-yellow-50 rounded-lg p-2.5 border-2 border-yellow-300 shadow-md">
+				<div class="flex items-center justify-between bg-yellow-50 rounded-md p-2.5 border border-yellow-300 shadow-sm">
 					<span class="text-xs font-semibold text-yellow-800">Overfill</span>
 					<span class="text-sm font-bold text-yellow-800">+{ndc.overfill.toFixed(1)}</span>
 				</div>
 			{/if}
 			{#if ndc.underfill > 0}
-				<div class="flex items-center justify-between bg-red-50 rounded-lg p-2.5 border-2 border-red-300 shadow-md">
-					<span class="text-xs font-semibold text-red-800">Underfill</span>
-					<span class="text-sm font-bold text-red-800">-{ndc.underfill.toFixed(1)}</span>
+				<div class="flex items-center justify-between bg-red-500 rounded-md p-2.5 border-2 border-red-600 shadow-sm">
+					<span class="text-xs font-semibold text-white">Underfill</span>
+					<span class="text-sm font-bold text-white">-{ndc.underfill.toFixed(1)}</span>
 				</div>
 			{/if}
 		</div>

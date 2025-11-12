@@ -63,14 +63,14 @@
 
 <div
 	bind:this={errorElement}
-	class="bg-red-50 border border-red-200 rounded-lg p-4"
+	class="bg-red-500 border-2 border-red-600 rounded-md p-4"
 	role="alert"
 	aria-live="assertive"
 	tabindex="-1"
 >
 	<div class="flex items-start">
-		<svg
-			class="w-5 h-5 text-red-600 mr-3 flex-shrink-0 mt-0.5"
+			<svg
+			class="w-5 h-5 text-white mr-3 flex-shrink-0 mt-0.5"
 			fill="none"
 			stroke="currentColor"
 			viewBox="0 0 24 24"
@@ -84,18 +84,18 @@
 			/>
 		</svg>
 		<div class="flex-1">
-			<h3 class="text-lg font-semibold text-red-900 mb-2">Error</h3>
-			<p class="text-sm text-red-800 mb-3">{userFriendlyMessage}</p>
+			<h3 class="text-lg font-semibold text-white mb-2">Error</h3>
+			<p class="text-sm text-white mb-3">{userFriendlyMessage}</p>
 
 			{#if error.code === 'DRUG_NOT_FOUND' && suggestions && suggestions.length > 0}
 				<div class="mb-4">
-					<p class="text-sm font-medium text-red-900 mb-2">Did you mean:</p>
+					<p class="text-sm font-medium text-white mb-2">Did you mean:</p>
 					<div class="flex flex-wrap gap-2">
 						{#each suggestions as suggestion (suggestion)}
 							<button
 								type="button"
 								on:click={() => handleSuggestion(suggestion)}
-								class="px-3 py-1 bg-teal-soft-bg hover:bg-teal-light text-teal-dark text-sm rounded transition-colors focus:outline-none focus:ring-2 focus:ring-teal-primary"
+								class="px-3 py-1 bg-teal-primary/10 hover:bg-teal-primary/20 text-teal-dark font-medium text-sm rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-teal-primary"
 							>
 								{suggestion}
 							</button>
@@ -105,25 +105,10 @@
 			{/if}
 
 			{#if error.code === 'SIG_PARSE_FAILED'}
-				<div class="mb-4 p-3 bg-gray-100 rounded border border-gray-300">
+				<div class="mb-4 p-3 bg-gray-100 rounded-md border border-gray-300">
 					<p class="text-sm font-medium text-gray-900 mb-1">Example format:</p>
 					<p class="text-sm text-gray-700 font-mono">Take 1 tablet twice daily</p>
 				</div>
-			{/if}
-
-			{#if onRetry}
-				<button
-					type="button"
-					on:click={handleRetry}
-					disabled={!canRetry}
-					class="px-4 py-2 bg-teal-primary text-white rounded-md hover:bg-teal-dark disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-teal-primary"
-				>
-					{#if showCountdown && remainingSeconds > 0}
-						Retry in {remainingSeconds} second{remainingSeconds !== 1 ? 's' : ''}...
-					{:else}
-						Retry
-					{/if}
-				</button>
 			{/if}
 		</div>
 	</div>

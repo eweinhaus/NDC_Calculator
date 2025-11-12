@@ -165,9 +165,9 @@ function drawSectionBox(
 	title: string,
 	titleSize: number = 12
 ): void {
-	// Draw title bar with blue background
-	doc.setFillColor(59, 130, 246); // Blue background
-	doc.setDrawColor(59, 130, 246);
+	// Draw title bar with teal background
+	doc.setFillColor(6, 182, 212); // Teal background
+	doc.setDrawColor(6, 182, 212);
 	doc.setLineWidth(0.5);
 	doc.rect(x, y, width, 8, 'FD');
 	
@@ -208,10 +208,10 @@ export function downloadResultsAsPdf(results: CalculationResult): void {
 		};
 
 		// Header with professional styling
-		doc.setFillColor(59, 130, 246); // Blue header
+		doc.setFillColor(6, 182, 212); // Teal header
 		doc.rect(0, 0, pageWidth, 25, 'F');
 		
-		// Title - white text on blue background
+		// Title - white text on teal background
 		doc.setTextColor(255, 255, 255);
 		doc.setFontSize(18);
 		doc.setFont('helvetica', 'bold');

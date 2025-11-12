@@ -15,6 +15,10 @@ interface CacheEntry<T> {
  * Check if localStorage is available.
  */
 function isLocalStorageAvailable(): boolean {
+	// Check if we're in a browser environment first
+	if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+		return false;
+	}
 	try {
 		const test = '__localStorage_test__';
 		localStorage.setItem(test, test);

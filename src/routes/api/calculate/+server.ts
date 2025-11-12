@@ -124,32 +124,45 @@ export const POST: RequestHandler = async ({ request }) => {
 				logger.warn('FDA package lookup returned no result for NDC', undefined, { ndc: trimmedInput });
 			}
 
-			// Extract RxCUI from package details when available
-			if (packageDetails?.rxcui && packageDetails.rxcui.length > 0) {
-				rxcui = packageDetails.rxcui[0];
-				drugName = trimmedInput;
-				console.log('✅ [CALCULATE] NDC found, extracted RxCUI from FDA package', {
+			// For NDC inputs, prioritize RxNorm NDC→RxCUI lookup (more specific)
+			// FDA's RxCUI array may contain multiple RxCUIs for different strengths/formulations
+			console.log('🔍 [CALCULATE] Attempting RxNorm NDC→RxCUI lookup first', { ndc: trimmedInput });
+			logger.info('Attempting RxNorm NDC→RxCUI lookup', undefined, { ndc: trimmedInput });
+			rxcui = await getRxcuiByNdc(trimmedInput);
+			
+			if (rxcui) {
+				console.log('✅ [CALCULATE] RxNorm returned RxCUI for NDC', {
 					ndc: trimmedInput,
-					rxcui,
-					packageNdc: packageDetails.package_ndc
+					rxcui
 				});
+				drugName = packageDetails?.generic_name || trimmedInput;
 			} else {
-				console.warn('⚠️ [CALCULATE] FDA package did not include RxCUI, trying fallbacks', {
+				console.warn('⚠️ [CALCULATE] RxNorm NDC lookup failed, trying FDA RxCUI array', {
 					ndc: trimmedInput,
-					hasGenericName: !!packageDetails?.generic_name,
-					genericName: packageDetails?.generic_name
+					hasFdaRxcui: !!packageDetails?.rxcui?.length
 				});
 				
-				// Try RxNorm NDC→RxCUI lookup first
-				logger.info('Fallback 1: RxNorm NDC→RxCUI lookup', undefined, { ndc: trimmedInput });
-				rxcui = await getRxcuiByNdc(trimmedInput);
-				
-				// If that fails but we have a generic name, try looking up by drug name
-				if (!rxcui && packageDetails?.generic_name) {
-					console.error('⚠️ [CALCULATE] RxNorm NDC lookup failed, trying generic name from FDA', {
+				// Fallback to FDA's RxCUI array (may be less specific)
+				if (packageDetails?.rxcui && packageDetails.rxcui.length > 0) {
+					rxcui = packageDetails.rxcui[0];
+					drugName = trimmedInput;
+					console.log('✅ [CALCULATE] Using FDA RxCUI from package details', {
+						ndc: trimmedInput,
+						rxcui,
+						packageNdc: packageDetails.package_ndc,
+						totalRxcuis: packageDetails.rxcui.length
+					});
+					logger.info('Using FDA RxCUI from package details', undefined, {
+						ndc: trimmedInput,
+						rxcui,
+						totalRxcuis: packageDetails.rxcui.length
+					});
+				} else if (packageDetails?.generic_name) {
+					// If FDA doesn't have RxCUI, try looking up by generic name
+					console.error('⚠️ [CALCULATE] No RxCUI in FDA package, trying generic name lookup', {
 						genericName: packageDetails.generic_name
 					});
-					logger.info('Fallback 2: RxNorm drug name lookup using FDA generic name', undefined, {
+					logger.info('Fallback: RxNorm drug name lookup using FDA generic name', undefined, {
 						genericName: packageDetails.generic_name
 					});
 					rxcui = await searchByDrugName(packageDetails.generic_name);
@@ -159,17 +172,6 @@ export const POST: RequestHandler = async ({ request }) => {
 							rxcui
 						});
 						drugName = packageDetails.generic_name;
-					}
-				}
-				
-				if (rxcui) {
-					console.log('✅ [CALCULATE] RxNorm fallback returned RxCUI for NDC', {
-						ndc: trimmedInput,
-						rxcui,
-						method: packageDetails?.generic_name ? 'generic_name' : 'ndc'
-					});
-					if (!drugName) {
-						drugName = packageDetails?.generic_name || trimmedInput;
 					}
 				}
 			}

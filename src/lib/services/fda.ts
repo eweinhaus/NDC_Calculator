@@ -285,6 +285,60 @@ function mapToPackageDetails(result: FdaPackageResult, packageNdc: string): FdaP
 }
 
 /**
+ * Generate alternative labeler code formats for searching.
+ * FDA may store NDCs with 4-digit or 5-digit labeler codes.
+ * FDA may also store product codes with or without leading zeros.
+ * @param productNdc - Product NDC in format "XXXXX-XXXX" or "XXXX-XXXX"
+ * @returns Array of alternative formats to try, including original
+ */
+function generateLabelerFormatVariants(productNdc: string): string[] {
+	const variants: string[] = [productNdc]; // Always include original
+	
+	const parts = productNdc.split('-');
+	
+	if (parts.length === 2) {
+		const labeler = parts[0];
+		const product = parts[1];
+		
+		// Generate labeler variants (4-digit vs 5-digit)
+		const labelerVariants: string[] = [labeler];
+		
+		// If labeler is 5 digits starting with 0, add 4-digit version
+		if (labeler.length === 5 && labeler.startsWith('0')) {
+			labelerVariants.push(labeler.substring(1));
+		}
+		// If labeler is 4 digits, add 5-digit version with leading zero
+		else if (labeler.length === 4) {
+			labelerVariants.push(`0${labeler}`);
+		}
+		
+		// Generate product variants (with/without leading zeros)
+		const productVariants: string[] = [product];
+		
+		// If product has leading zeros, add variant(s) with them stripped
+		if (product.startsWith('0')) {
+			// Strip one leading zero at a time to generate all variants
+			let stripped = product;
+			while (stripped.startsWith('0') && stripped.length > 1) {
+				stripped = stripped.substring(1);
+				productVariants.push(stripped);
+			}
+		}
+		
+		// Generate all combinations of labeler and product variants
+		for (const labelerVar of labelerVariants) {
+			for (const productVar of productVariants) {
+				variants.push(`${labelerVar}-${productVar}`);
+		}
+	}
+	}
+	
+	const uniqueVariants = [...new Set(variants)];
+	
+	return uniqueVariants;
+}
+
+/**
  * Extract product NDC from package NDC (remove package code).
  * @param packageNdc - Full package NDC (e.g., "00002-3227-30")
  * @returns Product NDC (e.g., "00002-3227") or null if invalid
@@ -454,42 +508,101 @@ export async function getPackageDetails(ndc: string): Promise<FdaPackageDetails 
 			
 			if (isPackageNdc) {
 				// Try searching by package_ndc first (exact match)
-				const packageNdcForSearch = normalizeNdcForApi(ndc);
-				const packageSearchQuery = `?search=package_ndc:${packageNdcForSearch}&limit=5`;
-				const packageSearchUrl = `${BASE_URL}${packageSearchQuery}`;
+				// Generate variants for labeler (4 vs 5 digits) AND product (with/without leading zeros)
+				const normalizedWithDashes = normalizeNdc(ndc);
+				let packageNdcVariants: string[] = [];
 				
-				console.error(`🔍 [FDA] Package NDC search:`, {
-					originalNdc: ndc,
-					packageNdcForSearch,
-					packageSearchQuery,
-					packageSearchUrl
-				});
+				if (normalizedWithDashes) {
+					const parts = normalizedWithDashes.split('-');
+					if (parts.length === 3) {
+						const labeler = parts[0]; // e.g., "00002" or "00046"
+						const product = parts[1]; // e.g., "1214" or "0749"
+						const package_ = parts[2]; // e.g., "04" or "05"
+						
+						// Generate labeler variants (4-digit vs 5-digit)
+						const labelerVariants: string[] = [labeler];
+						if (labeler.length === 5 && labeler.startsWith('0')) {
+							labelerVariants.push(labeler.substring(1));
+						}
+						
+						// Generate product variants (with/without leading zeros)
+						const productVariants: string[] = [product];
+						if (product.startsWith('0')) {
+							let stripped = product;
+							while (stripped.startsWith('0') && stripped.length > 1) {
+								stripped = stripped.substring(1);
+								productVariants.push(stripped);
+							}
+						}
+						
+						// Generate all combinations of labeler + product + package
+						for (const labelerVar of labelerVariants) {
+							for (const productVar of productVariants) {
+								const variant = `${labelerVar}${productVar}${package_}`;
+								packageNdcVariants.push(variant);
+							}
+						}
+					}
+				}
 				
-				logger.info(`[FDA] Making API request (attempt 1 - package_ndc search)`, undefined, {
-					url: packageSearchUrl,
-					searchTerm: `package_ndc:${packageNdcForSearch}`,
-					lookingFor: ndc
-				});
+				if (packageNdcVariants.length === 0) {
+					packageNdcVariants.push(normalizeNdcForApi(ndc));
+				}
 				
-				response = await makeRequest(packageSearchQuery);
+				// Remove duplicates
+				packageNdcVariants = [...new Set(packageNdcVariants)];
 				
-				console.error(`📥 [FDA] package_ndc search response:`, {
-					resultsCount: response.results?.length || 0,
-					hasError: !!response.error,
-					error: response.error
-				});
+				// Try each variant until we get results
+				let foundResults = false;
+				for (const packageNdcForSearch of packageNdcVariants) {
+					const packageSearchQuery = `?search=package_ndc:${packageNdcForSearch}&limit=5`;
+					const packageSearchUrl = `${BASE_URL}${packageSearchQuery}`;
+					
+					console.error(`🔍 [FDA] Trying package NDC variant: "${packageNdcForSearch}"`, {
+						packageSearchQuery,
+						packageSearchUrl
+					});
+					
+					logger.info(`[FDA] Making API request (package_ndc search variant)`, undefined, {
+						url: packageSearchUrl,
+						searchTerm: `package_ndc:${packageNdcForSearch}`,
+						lookingFor: ndc,
+						variant: packageNdcForSearch
+					});
+					
+					response = await makeRequest(packageSearchQuery);
+					
+					console.error(`📥 [FDA] package_ndc search response (variant "${packageNdcForSearch}"):`, {
+						resultsCount: response.results?.length || 0,
+						hasError: !!response.error,
+						error: response.error
+					});
+					
+					logger.info(`[FDA] package_ndc search response received`, undefined, {
+						resultsCount: response.results?.length || 0,
+						hasError: !!response.error,
+						variant: packageNdcForSearch
+					});
+					
+					// If we got results, stop trying variants
+					if (response.results && response.results.length > 0) {
+						console.error(`✅ [FDA] Found results with package NDC variant: "${packageNdcForSearch}"`);
+						foundResults = true;
+						break;
+					}
+				}
 				
-				logger.info(`[FDA] package_ndc search response received`, undefined, {
-					resultsCount: response.results?.length || 0,
-					hasError: !!response.error
-				});
+				if (!foundResults) {
+					response = { results: [] };
+				}
 				
 				// CRITICAL: Verify that package_ndc search returned the EXACT package we're looking for
 				if (response.results && response.results.length > 0) {
-					const targetPackageNormalized = normalizeNdcForApi(ndc);
+					// Generate all possible normalized versions to compare against
+					const targetPackageVariants = packageNdcVariants;
 					console.error(`🔍 [FDA] Looking for exact package match:`, {
 						searchedNdc: ndc,
-						targetPackageNormalized
+						targetPackageVariants
 					});
 					
 					let exactMatchFound = false;
@@ -500,13 +613,18 @@ export async function getPackageDetails(ndc: string): Promise<FdaPackageDetails 
 							for (const pkg of candidate.packaging) {
 								foundPackages.push(pkg.package_ndc);
 								const pkgNormalized = normalizeNdcForApi(pkg.package_ndc);
+								
+								// Check if package matches any of our target variants
+								const matches = targetPackageVariants.some(variant => pkgNormalized === variant);
+								
 								console.error(`🔍 [FDA] Comparing package:`, {
 									pkgPackageNdc: pkg.package_ndc,
 									pkgNormalized,
-									targetPackageNormalized,
-									matches: pkgNormalized === targetPackageNormalized
+									targetPackageVariants,
+									matches
 								});
-								if (pkgNormalized === targetPackageNormalized) {
+								
+								if (matches) {
 									exactMatchFound = true;
 									console.error(`✅ [FDA] Found exact package match in package_ndc search: ${pkg.package_ndc}`);
 									logger.info(`[FDA] Found exact package match in package_ndc search: ${pkg.package_ndc}`, undefined, {
@@ -516,12 +634,14 @@ export async function getPackageDetails(ndc: string): Promise<FdaPackageDetails 
 								}
 							}
 						}
+						if (exactMatchFound) break;
 					}
 					
 					if (!exactMatchFound) {
 						console.error(`⚠️ [FDA] package_ndc search returned results but NONE contain the exact package "${ndc}"`, {
 							searchedNdc: ndc,
-							foundPackages
+							foundPackages,
+							targetPackageVariants
 						});
 						logger.warn(`[FDA] package_ndc search returned results but NONE contain the exact package "${ndc}"`, undefined, {
 							searchedNdc: ndc,
@@ -541,65 +661,83 @@ export async function getPackageDetails(ndc: string): Promise<FdaPackageDetails 
 						ndc,
 						productNdcToSearch
 					});
-					const productSearchQuery = `?search=product_ndc:${productNdcToSearch}&limit=5`;
-					const productSearchUrl = `${BASE_URL}${productSearchQuery}`;
 					
-					console.error(`🔍 [FDA] Product NDC search:`, {
-						productNdcToSearch,
-						productSearchQuery,
-						productSearchUrl
-					});
+					// Generate all labeler format variants to try
+					const productNdcVariants = generateLabelerFormatVariants(productNdcToSearch);
+					if (productNdcToSearchFallback && productNdcToSearchFallback !== productNdcToSearch) {
+						productNdcVariants.push(...generateLabelerFormatVariants(productNdcToSearchFallback));
+					}
+					const uniqueVariants = [...new Set(productNdcVariants)];
 					
-					logger.info(`[FDA] Making API request (attempt 2 - product_ndc search)`, undefined, {
-						url: productSearchUrl,
-						searchTerm: `product_ndc:${productNdcToSearch}`
-					});
+					console.error(`🔍 [FDA] Trying product NDC variants:`, uniqueVariants);
 					
-					response = await makeRequest(productSearchQuery);
-					
-					console.error(`📥 [FDA] product_ndc search response:`, {
-						resultsCount: response.results?.length || 0,
-						hasError: !!response.error,
-						error: response.error
-					});
-					
-					logger.info(`[FDA] product_ndc search response received`, undefined, {
-						resultsCount: response.results?.length || 0
-					});
-					
-					// If no results and we have a fallback, try that
-					if ((!response.results || response.results.length === 0) && productNdcToSearchFallback && productNdcToSearchFallback !== productNdcToSearch) {
-						console.error(`⚠️ [FDA] No results with "${productNdcToSearch}", trying fallback: "${productNdcToSearchFallback}"`);
-						logger.info(`[FDA] No results with "${productNdcToSearch}", trying fallback: "${productNdcToSearchFallback}"`, undefined, {
-							primary: productNdcToSearch,
-							fallback: productNdcToSearchFallback
+					// Try each variant until we get results
+					for (const variant of uniqueVariants) {
+						const productSearchQuery = `?search=product_ndc:${variant}&limit=5`;
+						const productSearchUrl = `${BASE_URL}${productSearchQuery}`;
+						
+						console.error(`🔍 [FDA] Product NDC search (variant):`, {
+							variant,
+							productSearchQuery,
+							productSearchUrl
 						});
-						const fallbackQuery = `?search=product_ndc:${productNdcToSearchFallback}&limit=5`;
-						console.error(`🔍 [FDA] Fallback search:`, { fallbackQuery });
-						response = await makeRequest(fallbackQuery);
-						console.error(`📥 [FDA] Fallback search response:`, {
+						
+						logger.info(`[FDA] Making API request (product_ndc search variant)`, undefined, {
+							url: productSearchUrl,
+							searchTerm: `product_ndc:${variant}`
+						});
+						
+						response = await makeRequest(productSearchQuery);
+						
+						console.error(`📥 [FDA] product_ndc search response (variant "${variant}"):`, {
 							resultsCount: response.results?.length || 0,
-							hasError: !!response.error
+							hasError: !!response.error,
+							error: response.error
 						});
+						
+						logger.info(`[FDA] product_ndc search response received`, undefined, {
+							resultsCount: response.results?.length || 0,
+							variant
+						});
+						
+						// If we got results, stop trying variants
+						if (response.results && response.results.length > 0) {
+							console.error(`✅ [FDA] Found results with variant: "${variant}"`);
+							break;
+						}
 					}
 				}
 			} else {
 				// For product NDCs, search by product_ndc
-				const searchQuery = `?search=product_ndc:${productNdcToSearch}&limit=5`;
-				const fullUrl = `${BASE_URL}${searchQuery}`;
+				// Generate all labeler format variants to try
+				const productNdcVariants = generateLabelerFormatVariants(productNdcToSearch);
+				if (productNdcToSearchFallback && productNdcToSearchFallback !== productNdcToSearch) {
+					productNdcVariants.push(...generateLabelerFormatVariants(productNdcToSearchFallback));
+				}
+				const uniqueVariants = [...new Set(productNdcVariants)];
 				
 				console.error(`\n🌐 [FDA] Making API request (product_ndc search):`);
-				console.error(`   URL: ${fullUrl}`);
-				console.error(`   Search term: "product_ndc:${productNdcToSearch}"`);
+				console.error(`   Trying variants: ${uniqueVariants.join(', ')}`);
 				
-			logger.debug(`Searching for NDC: ${ndc}, using product NDC: ${productNdcToSearch}`);
-				response = await makeRequest(searchQuery);
+				logger.debug(`Searching for NDC: ${ndc}, using product NDC variants: ${uniqueVariants.join(', ')}`);
 				
-				// If no results and we have a fallback, try that
-				if ((!response.results || response.results.length === 0) && productNdcToSearchFallback && productNdcToSearchFallback !== productNdcToSearch) {
-					console.error(`\n⚠️ [FDA] No results with "${productNdcToSearch}", trying fallback: "${productNdcToSearchFallback}"`);
-					const fallbackQuery = `?search=product_ndc:${productNdcToSearchFallback}&limit=5`;
-					response = await makeRequest(fallbackQuery);
+				// Try each variant until we get results
+				for (const variant of uniqueVariants) {
+					const searchQuery = `?search=product_ndc:${variant}&limit=5`;
+					const fullUrl = `${BASE_URL}${searchQuery}`;
+					
+					console.error(`   Trying variant: "${variant}"`);
+					console.error(`   URL: ${fullUrl}`);
+					
+					response = await makeRequest(searchQuery);
+					
+					console.error(`   Response: ${response.results?.length || 0} results`);
+					
+					// If we got results, stop trying variants
+					if (response.results && response.results.length > 0) {
+						console.error(`✅ [FDA] Found results with variant: "${variant}"`);
+						break;
+					}
 				}
 			}
 

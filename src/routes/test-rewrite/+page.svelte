@@ -80,7 +80,7 @@
 	<div class="mb-6">
 		<button
 			on:click={testAll}
-			class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+			class="bg-teal-primary hover:bg-teal-dark text-white font-bold py-2 px-4 rounded"
 			disabled={Object.values(loading).some((l) => l)}
 		>
 			{Object.values(loading).some((l) => l) ? 'Testing...' : 'Test All Examples'}
@@ -112,7 +112,7 @@
 							{/if}
 						</div>
 					{:else if results[sig].error && results[sig].error.includes('no change needed')}
-						<div class="bg-blue-50 border border-blue-200 rounded p-3 mt-2">
+						<div class="bg-teal-soft-bg border border-teal-light rounded p-3 mt-2">
 							<p class="text-sm">
 								<strong>ℹ️ No Rewrite Needed:</strong> SIG is already in correct format
 							</p>

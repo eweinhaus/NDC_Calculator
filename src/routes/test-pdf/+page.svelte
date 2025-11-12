@@ -99,7 +99,7 @@
 <div class="container mx-auto p-8 max-w-4xl">
 	<h1 class="text-3xl font-bold mb-6">PDF Download Test Page</h1>
 	
-	<div class="bg-blue-100 border border-blue-400 text-blue-800 px-4 py-3 rounded mb-6">
+	<div class="bg-teal-soft-bg border border-teal-default text-teal-darker px-4 py-3 rounded mb-6">
 		<p><strong>Test Instructions:</strong></p>
 		<ol class="list-decimal list-inside mt-2 space-y-1">
 			<li>Click the "Download Test PDF" button below</li>
@@ -113,7 +113,7 @@
 	<div class="mb-6 flex flex-wrap gap-3">
 		<button
 			on:click={handleDownloadPdf}
-			class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center gap-2"
+			class="bg-teal-primary hover:bg-teal-dark text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center gap-2"
 		>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -162,7 +162,7 @@
 	</div>
 
 	{#if testComplete && downloadLog.length > 0}
-		<div class="bg-white border-2 border-blue-500 rounded-lg p-4 mb-6">
+		<div class="bg-white border-2 border-teal-primary rounded-lg p-4 mb-6">
 			<h3 class="font-bold text-lg mb-2">Download Status:</h3>
 			<ul class="space-y-1">
 				{#each downloadLog as log}

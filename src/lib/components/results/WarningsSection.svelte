@@ -69,11 +69,11 @@
 	function getSeverityClasses(severity: Warning['severity']) {
 		switch (severity) {
 			case 'error':
-				return 'bg-red-50 border-red-200 text-red-800';
+				return 'bg-red-500 border-red-600 text-white';
 			case 'warning':
 				return 'bg-yellow-50 border-yellow-200 text-yellow-800';
-			case 'info':
-				return 'bg-blue-50 border-blue-200 text-blue-800';
+		case 'info':
+			return 'bg-teal-soft-bg border-teal-light text-teal-darker';
 			default:
 				return 'bg-gray-50 border-gray-200 text-gray-800';
 		}
@@ -98,24 +98,24 @@
 <button
 	type="button"
 	on:click={openModal}
-	class="w-full flex items-center justify-between p-3 bg-white rounded-xl shadow-lg border-2 border-amber-500 hover:bg-amber-50 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all group"
+	class="w-full flex items-center justify-between p-3 bg-offwhite-warm rounded-md shadow-sm border-2 border-amber-500 hover:bg-amber-500 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all group"
 	aria-label="View warnings ({warnings?.length || 0})"
 >
 	<div class="flex items-center gap-3">
-		<div class="p-2 bg-amber-500 rounded-lg group-hover:bg-amber-600 transition-colors">
+		<div class="p-2 bg-amber-500 rounded-md group-hover:bg-amber-600 transition-colors">
 			<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
 			</svg>
 		</div>
 		<div class="text-left">
-			<h3 class="text-base font-bold text-gray-900 group-hover:text-amber-600 transition-colors">
+			<h3 class="text-base font-bold text-gray-900 group-hover:text-white transition-colors">
 				Warnings & Notices
 			</h3>
-			<p class="text-xs text-gray-500 mt-0.5">{warnings?.length || 0} warning{warnings?.length !== 1 ? 's' : ''}</p>
+			<p class="text-xs text-gray-500 group-hover:text-white/90 mt-0.5 transition-colors">{warnings?.length || 0} warning{warnings?.length !== 1 ? 's' : ''}</p>
 		</div>
 	</div>
 	<svg
-		class="w-5 h-5 text-amber-500 group-hover:translate-x-1 transition-transform"
+		class="w-5 h-5 text-amber-500 group-hover:text-white group-hover:translate-x-1 transition-all"
 		fill="none"
 		stroke="currentColor"
 		viewBox="0 0 24 24"
@@ -139,17 +139,17 @@
 		<!-- Modal Content -->
 		<div
 			bind:this={modalElement}
-			class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col"
+			class="bg-white rounded-lg shadow-xl max-w-md w-full overflow-hidden flex flex-col border-2 border-red-600"
 			transition:fly={{ y: 20, duration: 200 }}
 			on:click|stopPropagation
 		>
 			<!-- Modal Header -->
-			<div class="flex items-center p-4 border-b-2 border-gray-200 bg-gradient-to-r from-amber-50 to-yellow-50">
+			<div class="flex items-center p-4 border-b-2 border-red-700 bg-red-600">
 				<h2
 					id="warnings-modal-title"
-					class="text-lg font-bold text-gray-900 flex items-center gap-2"
+					class="text-lg font-bold text-white flex items-center gap-2"
 				>
-					<svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
 					</svg>
 					Warnings & Notices
@@ -175,7 +175,7 @@
 				<button
 					bind:this={understandButtonElement}
 					on:click={closeModal}
-					class="w-full px-4 py-2 bg-teal-primary text-white font-semibold text-sm rounded-xl hover:bg-teal-dark transition-all focus:outline-none focus:ring-2 focus:ring-teal-primary focus:ring-offset-2 shadow-lg hover:shadow-xl"
+					class="w-full px-4 py-2 bg-red-600 text-white font-semibold text-sm rounded-md hover:bg-red-700 active:bg-red-800 transition-all focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 shadow-sm hover:shadow-md"
 				>
 					I Understand
 				</button>

@@ -72,24 +72,24 @@
 <button
 	type="button"
 	on:click={openModal}
-	class="w-full flex items-center justify-between p-3 bg-white rounded-xl shadow-lg border-2 border-teal-primary hover:bg-teal-50 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-teal-primary focus:ring-offset-2 transition-all group"
+	class="w-full flex items-center justify-between p-3 bg-offwhite-warm rounded-md shadow-sm border-2 border-red-600 hover:bg-red-600 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 transition-all group"
 	aria-label="View alternative NDCs ({alternatives?.length || 0})"
 >
 	<div class="flex items-center gap-3">
-		<div class="p-2 bg-teal-primary rounded-lg group-hover:bg-teal-dark transition-colors">
+		<div class="p-2 bg-red-600 rounded-md group-hover:bg-red-700 transition-colors">
 			<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
 			</svg>
 		</div>
 		<div class="text-left">
-			<h3 class="text-base font-bold text-gray-900 group-hover:text-teal-primary transition-colors">
+			<h3 class="text-base font-bold text-gray-900 group-hover:text-white transition-colors">
 				Alternative NDCs
 			</h3>
-			<p class="text-xs text-gray-500 mt-0.5">{alternatives?.length || 0} options available</p>
+			<p class="text-xs text-gray-500 group-hover:text-white/90 mt-0.5 transition-colors">{alternatives?.length || 0} options available</p>
 		</div>
 	</div>
 	<svg
-		class="w-5 h-5 text-teal-primary group-hover:translate-x-1 transition-transform"
+		class="w-5 h-5 text-red-600 group-hover:text-white group-hover:translate-x-1 transition-all"
 		fill="none"
 		stroke="currentColor"
 		viewBox="0 0 24 24"
@@ -115,17 +115,17 @@
 		<!-- Modal Content -->
 		<div
 			bind:this={modalElement}
-			class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+			class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col border-2 border-red-600"
 			transition:fly={{ y: 20, duration: 200 }}
 			on:click|stopPropagation
 		>
 			<!-- Modal Header -->
-			<div class="flex items-center justify-between p-4 border-b-2 border-gray-200 bg-gradient-to-r from-teal-50 to-blue-50">
+			<div class="flex items-center justify-between p-4 border-b-2 border-red-700 bg-red-600">
 				<h2
 					id="alternatives-modal-title"
-					class="text-lg font-bold text-gray-900 flex items-center gap-2"
+					class="text-lg font-bold text-white flex items-center gap-2"
 				>
-					<svg class="w-5 h-5 text-teal-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
 					</svg>
 					Alternative NDCs ({alternatives.length})
@@ -133,10 +133,10 @@
 				<button
 					bind:this={closeButtonElement}
 					on:click={closeModal}
-					class="p-2 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-primary transition-colors"
+					class="p-2 hover:bg-white/20 rounded-md focus:outline-none focus:ring-1 focus:ring-white transition-colors"
 					aria-label="Close modal"
 				>
-					<svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
 					</svg>
 				</button>
@@ -147,7 +147,7 @@
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 					{#each alternatives as alternative, index (index + '-' + alternative.ndc)}
 						<div
-							class="bg-white border-2 border-gray-200 rounded-lg p-3 hover:border-teal-primary hover:shadow-md cursor-pointer transition-all"
+							class="bg-offwhite-warm border-2 border-red-600 rounded-md p-3 hover:border-red-700 hover:shadow-md cursor-pointer transition-all group"
 							on:click={() => handleSelect(alternative)}
 							role="button"
 							tabindex="0"
@@ -160,7 +160,7 @@
 										type="button"
 										on:click={(e) => handleCopy(alternative.ndc, e)}
 										disabled={copyingNdc === alternative.ndc}
-										class="p-1.5 hover:bg-teal-soft-bg rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+										class="p-1.5 hover:bg-red-600/10 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
 										aria-label="Copy NDC code {alternative.ndc}"
 									>
 										<svg
@@ -198,7 +198,7 @@
 										<span class="text-yellow-700 font-semibold bg-yellow-50 px-2 py-1 rounded">Overfill: +{alternative.overfill.toFixed(1)}</span>
 									{/if}
 									{#if alternative.underfill > 0}
-										<span class="text-red-700 font-semibold bg-red-50 px-2 py-1 rounded">Underfill: -{alternative.underfill.toFixed(1)}</span>
+										<span class="text-white font-semibold bg-red-600 px-2 py-1 rounded">Underfill: -{alternative.underfill.toFixed(1)}</span>
 									{/if}
 								</div>
 							</div>
@@ -208,10 +208,10 @@
 			</div>
 
 			<!-- Modal Footer -->
-			<div class="p-4 border-t-2 border-gray-200 bg-gray-50">
+			<div class="p-4 border-t-2 border-red-600/20 bg-red-50">
 				<button
 					on:click={closeModal}
-					class="w-full px-4 py-2 bg-teal-primary text-white font-semibold text-sm rounded-xl hover:bg-teal-dark transition-all focus:outline-none focus:ring-2 focus:ring-teal-primary focus:ring-offset-2 shadow-lg hover:shadow-xl"
+					class="w-full px-4 py-2 bg-red-600 text-white font-semibold text-sm rounded-md hover:bg-red-700 transition-all focus:outline-none focus:ring-1 focus:ring-red-600 focus:ring-offset-1 shadow-sm hover:shadow"
 				>
 					Close
 				</button>

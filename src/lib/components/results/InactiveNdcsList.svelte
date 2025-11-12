@@ -11,11 +11,11 @@
 </script>
 
 {#if inactiveNdcs && inactiveNdcs.length > 0}
-	<div class="bg-amber-50 border-2 border-amber-300 rounded-xl shadow-md">
+	<div class="bg-amber-50 border border-amber-300 rounded-md shadow-sm">
 		<button
 			type="button"
 			on:click={toggle}
-			class="w-full flex items-center justify-between p-2.5 text-left hover:bg-amber-100/50 focus:outline-none focus:ring-2 focus:ring-amber-500 rounded-xl transition-colors"
+			class="w-full flex items-center justify-between p-2.5 text-left hover:bg-amber-100/50 focus:outline-none focus:ring-1 focus:ring-amber-500 rounded-md transition-colors"
 			aria-expanded={isExpanded}
 			aria-controls="inactive-ndcs-content"
 			aria-label="Inactive NDCs"
@@ -40,7 +40,7 @@
 			<div id="inactive-ndcs-content" class="px-2.5 pb-2.5" transition:fly={{ y: -10, duration: 200 }}>
 				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 pt-1.5">
 					{#each inactiveNdcs as item (item.ndc)}
-						<div class="bg-white rounded-lg p-2 border-2 border-amber-200 shadow-sm">
+						<div class="bg-offwhite-warm rounded-md p-2 border-2 border-amber-200 shadow-sm">
 							<div class="text-xs font-mono font-bold text-gray-900">{item.ndc}</div>
 							{#if item.reason}
 								<div class="text-xs text-gray-600 mt-1 font-medium">{item.reason}</div>

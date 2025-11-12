@@ -117,24 +117,24 @@
 			<button
 				type="button"
 				on:click={() => alternativeNdcsComponent?.openModal()}
-				class="flex-1 flex items-center justify-between p-3 bg-white rounded-xl shadow-lg border-2 border-teal-primary hover:bg-teal-50 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-teal-primary focus:ring-offset-2 transition-all group"
+				class="flex-1 flex items-center justify-between p-3 bg-offwhite-warm rounded-md shadow-sm border-2 border-red-600 hover:bg-red-600 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 transition-all group"
 				aria-label="View alternative NDCs ({results.alternatives?.length || 0})"
 			>
 				<div class="flex items-center gap-3">
-					<div class="p-2 bg-teal-primary rounded-lg group-hover:bg-teal-dark transition-colors">
+					<div class="p-2 bg-red-600 rounded-md group-hover:bg-red-700 transition-colors">
 						<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
 						</svg>
 					</div>
 					<div class="text-left">
-						<h3 class="text-base font-bold text-gray-900 group-hover:text-teal-primary transition-colors">
+						<h3 class="text-base font-bold text-gray-900 group-hover:text-white transition-colors">
 							Alternative NDCs
 						</h3>
-						<p class="text-xs text-gray-500 mt-0.5">{results.alternatives?.length || 0} options</p>
+						<p class="text-xs text-gray-500 group-hover:text-white/90 mt-0.5 transition-colors">{results.alternatives?.length || 0} options</p>
 					</div>
 				</div>
 				<svg
-					class="w-5 h-5 text-teal-primary group-hover:translate-x-1 transition-transform"
+					class="w-5 h-5 text-red-600 group-hover:text-white group-hover:translate-x-1 transition-all"
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24"
@@ -150,11 +150,11 @@
 			<button
 				type="button"
 				on:click={() => warningsSectionComponent?.openModal()}
-				class="flex-1 flex items-center justify-between p-3 bg-white rounded-xl shadow-lg border-2 border-amber-500 hover:bg-amber-50 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all group"
+				class="flex-1 flex items-center justify-between p-3 bg-offwhite-warm rounded-md shadow-sm border-2 border-amber-500 hover:bg-red-500 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all group"
 				aria-label="View warnings ({results.warnings?.length || 0})"
 			>
 				<div class="flex items-center gap-3">
-					<div class="p-2 bg-amber-500 rounded-lg group-hover:bg-amber-600 transition-colors">
+					<div class="p-2 bg-amber-500 rounded-md group-hover:bg-amber-600 transition-colors">
 						<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
 						</svg>

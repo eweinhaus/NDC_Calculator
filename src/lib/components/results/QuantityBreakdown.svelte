@@ -4,7 +4,7 @@
 	export let quantity: QuantityResult;
 </script>
 
-<div class="bg-white rounded-xl shadow-md border border-gray-200 p-2.5" aria-label="Quantity calculation breakdown">
+<div class="bg-offwhite-warm rounded-md shadow-sm border-2 border-red-600 p-2.5" aria-label="Quantity calculation breakdown">
 	<h3 class="text-base font-bold mb-1.5 text-gray-900 flex items-center gap-2">
 		<svg class="w-5 h-5 text-teal-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -27,7 +27,7 @@
 		<div class="pt-1.5 mt-1.5 border-t-2 border-gray-300">
 			<div class="flex items-center justify-between mb-1">
 				<span class="text-xs font-medium text-gray-600">Formula:</span>
-				<span class="text-xs font-mono text-gray-600 bg-gray-50 px-1.5 py-0.5 rounded">
+				<span class="text-xs font-mono text-gray-700 bg-teal-light/10 px-1.5 py-0.5 rounded">
 					({quantity.calculation.dosage} × {quantity.calculation.frequency}) × {quantity.calculation.daysSupply}
 				</span>
 			</div>

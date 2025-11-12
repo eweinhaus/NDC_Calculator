@@ -26,6 +26,8 @@ export interface ParsedPackage {
 	metadata?: PackageMetadata;
 }
 
+const NUMBER_PATTERN = '(?:\\d+(?:\\.\\d+)?|\\.\\d+)';
+
 /**
  * Parses package description to extract quantity information
  * @param description - Package description from FDA API
@@ -104,7 +106,7 @@ function parseSimpleFormat(description: string): ParsedPackage | null {
 	const cleaned = description.replace(/\s*\([^)]+\)\s*$/, '').trim();
 
 	// Check for multi-pack format FIRST: "3 x 30 TABLET"
-	const multiPackMatch = cleaned.match(/(\d+)\s+x\s+(\d+(?:\.\d+)?)\s+([A-Z]+(?:\s+[A-Z]+)*?)/i);
+	const multiPackMatch = cleaned.match(new RegExp(`(\\d+)\\s+x\\s+(${NUMBER_PATTERN})\\s+([A-Z]+(?:\\s+[A-Z]+)*?)`, 'i'));
 	if (multiPackMatch) {
 		const packageCount = parseInt(multiPackMatch[1], 10);
 		const perPackageQuantity = parseFloat(multiPackMatch[2]);
@@ -119,7 +121,7 @@ function parseSimpleFormat(description: string): ParsedPackage | null {
 
 	// Pattern 1: "X UNIT in 1 CONTAINER" or "X UNIT"
 	// Examples: "30 TABLET in 1 BOTTLE", "100 TABLET", "87.1 g in 1 PACKAGE"
-	const pattern1 = /^(\d+(?:\.\d+)?)\s+([A-Z]+(?:\s+[A-Z]+)*?)(?:\s+in\s+\d+\s+[A-Z]+(?:\s+[A-Z,]+)*)?$/i;
+	const pattern1 = new RegExp(`^(${NUMBER_PATTERN})\\s+([A-Z]+(?:\\s+[A-Z]+)*?)(?:\\s+in\\s+\\d+\\s+[A-Z]+(?:\\s+[A-Z,]+)*)?$`, 'i');
 	const match1 = cleaned.match(pattern1);
 	if (match1) {
 		const quantity = parseFloat(match1[1]);
@@ -134,7 +136,7 @@ function parseSimpleFormat(description: string): ParsedPackage | null {
 
 	// Pattern 2: Handle formats with extra descriptors like "30 TABLET, EXTENDED RELEASE in 1 BOTTLE"
 	// Extract quantity and unit, ignoring descriptors
-	const pattern2 = /^(\d+(?:\.\d+)?)\s+([A-Z]+)(?:\s*,\s*[A-Z\s]+)?(?:\s+in\s+\d+\s+[A-Z]+(?:\s+[A-Z,]+)*)?$/i;
+	const pattern2 = new RegExp(`^(${NUMBER_PATTERN})\\s+([A-Z]+)(?:\\s*,\\s*[A-Z\\s]+)?(?:\\s+in\\s+\\d+\\s+[A-Z]+(?:\\s+[A-Z,]+)*)?$`, 'i');
 	const match2 = cleaned.match(pattern2);
 	if (match2) {
 		const quantity = parseFloat(match2[1]);
@@ -148,7 +150,7 @@ function parseSimpleFormat(description: string): ParsedPackage | null {
 
 	// Pattern 3: Handle "X UNIT, DESCRIPTOR in 1 CONTAINER"
 	// More flexible pattern that handles commas and various descriptors
-	const pattern3 = /^(\d+(?:\.\d+)?)\s+([A-Z]+)/i;
+	const pattern3 = new RegExp(`^(${NUMBER_PATTERN})\\s+([A-Z]+)`, 'i');
 	const match3 = cleaned.match(pattern3);
 	if (match3) {
 		const quantity = parseFloat(match3[1]);
@@ -169,7 +171,7 @@ function parseSimpleFormat(description: string): ParsedPackage | null {
  */
 function parseLiquidFormat(description: string): ParsedPackage | null {
 	// Pattern: "X mL/L in 1 CONTAINER"
-	const pattern = /(\d+(?:\.\d+)?)\s*(ml|l|milliliters?|liters?)\s+in\s+\d+\s+(?:vial|bottle|container|package)/i;
+	const pattern = new RegExp(`(${NUMBER_PATTERN})\\s*(ml|l|milliliters?|liters?)\\s+in\\s+\\d+\\s+(?:vial|bottle|container|package)`, 'i');
 	const match = description.match(pattern);
 	if (match) {
 		const quantity = parseFloat(match[1]);
@@ -202,7 +204,7 @@ function parseInsulinFormat(description: string): ParsedPackage | null {
 
 		// Pattern: "X mL in 1 VIAL/CARTRIDGE" or "U-100, X mL in 1 VIAL"
 	// Match volume even if there's text before it (like "U-100,")
-		const volumeMatch = description.match(/(\d+(?:\.\d+)?)\s*(ml|l|milliliters?|liters?)\s+in\s+\d+\s+(?:vial|cartridge)/i);
+		const volumeMatch = description.match(new RegExp(`(${NUMBER_PATTERN})\\s*(ml|l|milliliters?|liters?)\\s+in\\s+\\d+\\s+(?:vial|cartridge)`, 'i'));
 		if (volumeMatch) {
 			const volume = parseFloat(volumeMatch[1]);
 			const volumeUnit = volumeMatch[2].toLowerCase() === 'l' ? 'L' : 'mL';

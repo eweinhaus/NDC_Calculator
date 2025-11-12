@@ -7,6 +7,7 @@ import { NdcInfo, NdcSelection } from '../types/ndc';
 import { parsePackageDescription, ParsedPackage } from './packageParser';
 import { logger } from '../utils/logger';
 import { normalizeUnitForMatching, convertLiquidVolume } from '../utils/unitConverter';
+import { normalizeNdc } from '../utils/ndcNormalizer';
 
 /**
  * Parses package size from NDC info using package parser.
@@ -248,11 +249,15 @@ export function selectOptimal(
 	maxResults: number = 5,
 	preferredNdc?: string
 ): NdcSelection[] {
+	console.error(`\n🎯 [NDC SELECTOR] START - Target: ${targetQuantity} ${targetUnit}, NDCs: ${ndcList.length}, Preferred: ${preferredNdc || 'none'}`);
+	
 	if (!ndcList || ndcList.length === 0) {
+		console.error(`❌ [NDC SELECTOR] No NDCs provided`);
 		return [];
 	}
 
 	if (targetQuantity <= 0) {
+		console.error(`❌ [NDC SELECTOR] Invalid target quantity: ${targetQuantity}`);
 		logger.warn('Invalid target quantity for NDC selection', { targetQuantity });
 		return [];
 	}
@@ -260,7 +265,12 @@ export function selectOptimal(
 	const candidates: NdcSelection[] = [];
 	const inactiveNdcs: NdcInfo[] = [];
 
+	console.error(`📋 [NDC SELECTOR] Processing ${ndcList.length} NDCs:`);
+	console.error(`   Sample NDCs: ${ndcList.slice(0, 3).map(n => n.ndc).join(', ')}`);
+	console.error(`   Sample dosage forms: ${[...new Set(ndcList.slice(0, 5).map(n => n.dosageForm))].join(', ')}`);
+
 	// Process each NDC
+	let processedCount = 0;
 	for (const ndcInfo of ndcList) {
 		// Filter out inactive NDCs (store for warnings)
 		if (!ndcInfo.active) {
@@ -279,6 +289,15 @@ export function selectOptimal(
 		if (multiPack) {
 			candidates.push(multiPack);
 		}
+		
+		processedCount++;
+	}
+	
+	console.error(`📊 [NDC SELECTOR] Generated ${candidates.length} candidates from ${processedCount} active NDCs (${inactiveNdcs.length} inactive)`);
+	if (candidates.length === 0 && processedCount > 0) {
+		console.error(`⚠️ [NDC SELECTOR] No candidates generated! Check unit matching.`);
+		console.error(`   Target unit: "${targetUnit}"`);
+		console.error(`   Dosage forms: ${[...new Set(ndcList.map(n => n.dosageForm))].join(', ')}`);
 	}
 
 	// Log inactive NDCs for warnings
@@ -290,26 +309,35 @@ export function selectOptimal(
 
 	// If a preferred NDC is specified, boost its score significantly
 	// This ensures user-specified NDCs are strongly prioritized
-	if (preferredNdc) {
-		// Normalize preferred NDC: remove spaces and dashes for comparison
-		const normalizedPreferred = preferredNdc.trim().replace(/\s/g, '').replace(/-/g, '');
+	if (preferredNdc && candidates.length > 0) {
+		// Normalize preferred NDC to 11-digit format (XXXXX-XXXX-XX)
+		// Then remove dashes for comparison
+		const normalizedPreferredWithDashes = normalizeNdc(preferredNdc);
+		const normalizedPreferred = normalizedPreferredWithDashes?.replace(/-/g, '') || '';
+		
+		console.error(`🎯 [NDC SELECTOR] Checking preferred NDC: "${preferredNdc}" → normalized: "${normalizedPreferred}"`);
+		
+		let boostedCount = 0;
 		for (const candidate of candidates) {
-			// Normalize candidate NDC: remove spaces and dashes for comparison
-			const normalizedCandidate = candidate.ndc.trim().replace(/\s/g, '').replace(/-/g, '');
+			// Normalize candidate NDC to 11-digit format (XXXXX-XXXX-XX)
+			// Then remove dashes for comparison
+			const normalizedCandidateWithDashes = normalizeNdc(candidate.ndc);
+			const normalizedCandidate = normalizedCandidateWithDashes?.replace(/-/g, '') || '';
+			
 			// Check if this candidate matches the preferred NDC (handles all format variations)
-			if (normalizedCandidate === normalizedPreferred) {
+			if (normalizedCandidate === normalizedPreferred && normalizedPreferred !== '') {
 				const originalScore = candidate.matchScore;
 				// Boost by 20 points to ensure it's preferred over other similar options
 				// Remove score cap to allow scores > 100 for preferred NDCs
 				candidate.matchScore = candidate.matchScore + 20;
-				logger.debug(`Boosted score for preferred NDC: ${candidate.ndc}`, {
-					originalScore,
-					boostedScore: candidate.matchScore,
-					preferredNdc,
-					boost: 20
-				});
-				// Don't break - boost ALL candidates from preferred NDC (single-pack and multi-pack)
+				boostedCount++;
+				console.error(`✅ [NDC SELECTOR] Boosted preferred NDC "${candidate.ndc}": ${originalScore} → ${candidate.matchScore}`);
 			}
+		}
+		
+		if (boostedCount === 0) {
+			console.error(`⚠️ [NDC SELECTOR] Preferred NDC "${preferredNdc}" not found in ${candidates.length} candidates`);
+			console.error(`   Sample candidate NDCs: ${candidates.slice(0, 3).map(c => c.ndc).join(', ')}`);
 		}
 	}
 

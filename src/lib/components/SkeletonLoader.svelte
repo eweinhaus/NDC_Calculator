@@ -52,7 +52,7 @@
 		</div>
 	{:else if type === 'drug-info'}
 		<!-- Drug info skeleton -->
-		<div class="bg-white rounded-lg shadow p-4">
+		<div class="bg-offwhite-warm rounded-md shadow-sm p-4 border-2 border-red-600">
 			<div class="h-6 w-48 shimmer rounded mb-3"></div>
 			<div class="space-y-2">
 				<div class="h-4 w-32 shimmer rounded"></div>
@@ -62,7 +62,7 @@
 		</div>
 	{:else if type === 'quantity'}
 		<!-- Quantity skeleton -->
-		<div class="bg-white rounded-lg shadow p-4">
+		<div class="bg-offwhite-warm rounded-md shadow-sm p-4 border-2 border-red-600">
 			<div class="h-6 w-40 shimmer rounded mb-3"></div>
 			<div class="space-y-2">
 				<div class="h-4 w-32 shimmer rounded"></div>
@@ -78,7 +78,7 @@
 		<!-- NDC list skeleton -->
 		<div class="space-y-3">
 			{#each Array(3) as _}
-				<div class="bg-white rounded-lg shadow p-4 border border-gray-200">
+				<div class="bg-offwhite-warm rounded-md shadow-sm p-4 border-2 border-red-600">
 					<div class="h-5 w-32 shimmer rounded mb-2"></div>
 					<div class="h-4 w-48 shimmer rounded mb-1"></div>
 					<div class="h-4 w-40 shimmer rounded"></div>
@@ -89,7 +89,7 @@
 		<!-- Results skeleton (full layout) -->
 		<div class="space-y-6">
 			<!-- Drug info skeleton -->
-			<div class="bg-white rounded-lg shadow p-4">
+			<div class="bg-offwhite-warm rounded-md shadow-sm p-4 border-2 border-red-600">
 				<div class="h-6 w-48 shimmer rounded mb-3"></div>
 				<div class="space-y-2">
 					<div class="h-4 w-32 shimmer rounded"></div>
@@ -97,7 +97,7 @@
 				</div>
 			</div>
 			<!-- Quantity skeleton -->
-			<div class="bg-white rounded-lg shadow p-4">
+			<div class="bg-offwhite-warm rounded-md shadow-sm p-4 border-2 border-red-600">
 				<div class="h-6 w-40 shimmer rounded mb-3"></div>
 				<div class="space-y-2">
 					<div class="h-4 w-32 shimmer rounded"></div>
@@ -106,7 +106,7 @@
 				</div>
 			</div>
 			<!-- Recommended NDC skeleton -->
-			<div class="bg-teal-soft-bg border-2 border-teal-primary rounded-lg shadow p-4">
+			<div class="bg-offwhite-warm border-2 border-red-600 rounded-md shadow-sm p-4">
 				<div class="h-6 w-40 shimmer rounded mb-3"></div>
 				<div class="space-y-2">
 					<div class="h-4 w-48 shimmer rounded"></div>
@@ -115,7 +115,7 @@
 				</div>
 			</div>
 			<!-- Alternatives skeleton -->
-			<div class="bg-white rounded-lg shadow p-4">
+			<div class="bg-offwhite-warm rounded-md shadow-sm p-4 border-2 border-red-600">
 				<div class="h-6 w-32 shimmer rounded"></div>
 			</div>
 		</div>
