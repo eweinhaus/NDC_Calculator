@@ -48,3 +48,12 @@ export function sigParseKey(sig: string): string {
 	return `sig:parse:${normalizeKey(sig)}`;
 }
 
+/**
+ * Generate cache key for FDA NDC autocomplete suggestions.
+ */
+export function fdaNdcAutocompleteKey(query: string): string {
+	// Normalize query: remove dashes, lowercase for consistency
+	const normalized = query.replace(/-/g, '').toLowerCase().trim();
+	return `fda:ndc:autocomplete:${normalized}`;
+}
+

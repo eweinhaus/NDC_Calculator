@@ -6,9 +6,10 @@ import { calculate as calculateQuantity } from '$lib/core/quantityCalculator';
 import { selectOptimal } from '$lib/core/ndcSelector';
 import { generateWarnings } from '$lib/core/warningGenerator';
 import { searchByDrugName, getSpellingSuggestions } from '$lib/services/rxnorm';
-import { getPackagesByRxcui, type FdaPackageDetails } from '$lib/services/fda';
+import { getPackagesByRxcui, getPackageDetails, type FdaPackageDetails } from '$lib/services/fda';
 import { parsePackageDescription } from '$lib/core/packageParser';
 import { logger } from '$lib/utils/logger';
+import { detectInputType } from '$lib/utils/inputDetector.js';
 import type { DrugInfo } from '$lib/types/drug.js';
 import type { NdcInfo } from '$lib/types/ndc.js';
 import type { NdcSelection } from '$lib/types/ndc.js';
@@ -62,31 +63,91 @@ export const POST: RequestHandler = async ({ request }) => {
 			});
 		}
 
-		// Step 1: Normalize drug name to RxCUI
-		console.log('🔍 [CALCULATE] Starting drug normalization', { drugInput: body.drugInput });
-		logger.debug('Starting drug normalization', { drugInput: body.drugInput });
-		const rxcui = await searchByDrugName(body.drugInput.trim());
-
-		console.log('🔍 [CALCULATE] RxCUI lookup result', { 
-			drugInput: body.drugInput.trim(),
-			rxcui: rxcui || 'NOT FOUND',
+		// Step 1: Detect input type and normalize to RxCUI
+		const trimmedInput = body.drugInput.trim();
+		const inputType = detectInputType(trimmedInput);
+		
+		console.log('🔍 [CALCULATE] Input type detection', { 
+			drugInput: trimmedInput,
+			inputType 
 		});
+		logger.debug('Input type detection', { drugInput: trimmedInput, inputType });
 
-		if (!rxcui) {
-			console.warn('⚠️ [CALCULATE] Drug not found, getting spelling suggestions');
-			// Try to get spelling suggestions
-			const suggestions = await getSpellingSuggestions(body.drugInput.trim());
-			console.warn('⚠️ [CALCULATE] Spelling suggestions', { suggestions });
-			return json<CalculationResponse>({
-				success: false,
-				error: {
-					code: 'DRUG_NOT_FOUND',
-					message: 'Drug not found. Please check the spelling or try a different name.',
-					details: {
-						suggestions: suggestions || [],
+		let rxcui: string | null = null;
+		let drugName: string | null = null;
+
+		if (inputType === 'ndc') {
+			// Input is an NDC code - get package details and extract RxCUI
+			console.log('🔍 [CALCULATE] Detected NDC code, fetching package details', { ndc: trimmedInput });
+			logger.debug('Detected NDC code, fetching package details', { ndc: trimmedInput });
+			
+			const packageDetails = await getPackageDetails(trimmedInput);
+			
+			if (!packageDetails) {
+				console.error('❌ [CALCULATE] NDC not found', { ndc: trimmedInput });
+				logger.warn('NDC not found', { ndc: trimmedInput });
+				return json<CalculationResponse>({
+					success: false,
+					error: {
+						code: 'DRUG_NOT_FOUND',
+						message: 'NDC code not found. Please check the NDC code and try again.',
 					},
-				},
+				});
+			}
+
+			// Extract RxCUI from package details
+			if (packageDetails.rxcui && packageDetails.rxcui.length > 0) {
+				rxcui = packageDetails.rxcui[0];
+				// Try to get drug name from package details (we'll use generic_name from FDA response)
+				// For now, we'll use the NDC as the identifier
+				drugName = trimmedInput; // Will be updated later from FDA data
+				console.log('✅ [CALCULATE] NDC found, extracted RxCUI', { 
+					ndc: trimmedInput,
+					rxcui,
+					packageNdc: packageDetails.package_ndc
+				});
+			} else {
+				console.error('❌ [CALCULATE] NDC found but no RxCUI associated', { 
+					ndc: trimmedInput,
+					packageDetails 
+				});
+				logger.warn('NDC found but no RxCUI associated', { ndc: trimmedInput });
+				return json<CalculationResponse>({
+					success: false,
+					error: {
+						code: 'DRUG_NOT_FOUND',
+						message: 'NDC code found but no drug information available. This NDC may not be linked to a drug in our system.',
+					},
+				});
+			}
+		} else {
+			// Input is a drug name - lookup RxCUI
+			console.log('🔍 [CALCULATE] Detected drug name, starting drug normalization', { drugInput: trimmedInput });
+			logger.debug('Starting drug normalization', { drugInput: trimmedInput });
+			rxcui = await searchByDrugName(trimmedInput);
+			drugName = trimmedInput;
+
+			console.log('🔍 [CALCULATE] RxCUI lookup result', { 
+				drugInput: trimmedInput,
+				rxcui: rxcui || 'NOT FOUND',
 			});
+
+			if (!rxcui) {
+				console.warn('⚠️ [CALCULATE] Drug not found, getting spelling suggestions');
+				// Try to get spelling suggestions
+				const suggestions = await getSpellingSuggestions(trimmedInput);
+				console.warn('⚠️ [CALCULATE] Spelling suggestions', { suggestions });
+				return json<CalculationResponse>({
+					success: false,
+					error: {
+						code: 'DRUG_NOT_FOUND',
+						message: 'Drug not found. Please check the spelling or try a different name.',
+						details: {
+							suggestions: suggestions || [],
+						},
+					},
+				});
+			}
 		}
 
 		// Step 2: Get NDCs for this RxCUI from FDA API
@@ -302,10 +363,33 @@ export const POST: RequestHandler = async ({ request }) => {
 			? generateWarnings(recommendedNdc, quantity.total, parsedSig, recommendedNdcInfo)
 			: [];
 
-		// Build drug info - extract from first FDA package if available
+		// Build drug info - get drug name from RxNorm if we have RxCUI
+		// If input was NDC, we need to get the drug name from RxNorm
+		let finalDrugName = drugName;
+		if (inputType === 'ndc' && rxcui) {
+			// Try to get drug name from RxNorm using RxCUI
+			try {
+				const rxnormResponse = await fetch(
+					`https://rxnav.nlm.nih.gov/REST/rxcui/${rxcui}/properties.json`
+				);
+				if (rxnormResponse.ok) {
+					const rxnormData = await rxnormResponse.json();
+					if (rxnormData.properties?.name) {
+						finalDrugName = rxnormData.properties.name;
+						console.log('✅ [CALCULATE] Got drug name from RxNorm', { 
+							rxcui, 
+							drugName: finalDrugName 
+						});
+					}
+				}
+			} catch (error) {
+				logger.debug('Could not get drug name from RxNorm, using NDC as fallback', { rxcui, error });
+			}
+		}
+
 		const firstPackage = fdaPackages[0];
 		const drugInfo: DrugInfo = {
-			name: body.drugInput.trim(),
+			name: finalDrugName || body.drugInput.trim(),
 			rxcui: rxcui,
 			strength: firstPackage?.strength,
 			dosageForm: firstPackage?.dosage_form,

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import type { CalculationResponse, CalculationRequest, ApiError } from '../lib/types/api.js';
 	import ResultsDisplay from '../lib/components/results/ResultsDisplay.svelte';
@@ -8,6 +9,7 @@
 	import Autocomplete from '../lib/components/Autocomplete.svelte';
 	import { debounce } from '../lib/utils/debounce.js';
 	import { showToast } from '../lib/stores/toast.js';
+	import { autocompletePreload, loadPreloadData } from '../lib/stores/autocompletePreload.js';
 
 	// Form state
 	let drugInput = '';
@@ -241,6 +243,14 @@
 			window.scrollTo({ top: 0, behavior: 'smooth' });
 		}, 100);
 	}
+
+	// Load preload data in background after page mount (non-blocking)
+	onMount(() => {
+		loadPreloadData();
+	});
+
+	// Access preloaded data reactively
+	$: preloadedData = $autocompletePreload.data;
 </script>
 
 <svelte:head>
@@ -297,6 +307,7 @@
 								on:blur={() => handleBlur('drugInput')}
 								minLength={3}
 								maxSuggestions={20}
+								preloadedData={preloadedData}
 							/>
 							<p class="text-sm text-gray-500 mt-1.5">Enter the medication name or NDC code (e.g., 00002-3227-30)</p>
 							{#if shouldShowError('drugInput')}

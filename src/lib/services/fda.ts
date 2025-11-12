@@ -7,7 +7,7 @@ import { logger } from '$lib/utils/logger.js';
 import { withRetry } from '$lib/utils/retry.js';
 import { cache } from './cache.js';
 import { deduplicate } from '$lib/utils/requestDeduplicator.js';
-import { fdaPackageKey, fdaPackagesKey } from '$lib/constants/cacheKeys.js';
+import { fdaPackageKey, fdaPackagesKey, fdaNdcAutocompleteKey } from '$lib/constants/cacheKeys.js';
 import { FDA_PACKAGE_TTL } from '$lib/constants/cacheTtl.js';
 import { normalizeNdc } from '$lib/utils/ndcNormalizer.js';
 
@@ -544,6 +544,112 @@ export async function getPackagesByRxcui(rxcui: string): Promise<FdaPackageDetai
 		} catch (error) {
 			logger.error(`Error getting packages for RxCUI: ${rxcui}`, error as Error);
 			throw error;
+		}
+	});
+}
+
+/**
+ * Get autocomplete suggestions for a partial NDC code.
+ * Uses FDA API with wildcard search to find matching NDC codes.
+ * @param query - Partial NDC code query (minimum 2-3 digits recommended)
+ * @returns Array of suggested NDC codes with drug names (limited to 20)
+ */
+export async function getNdcAutocompleteSuggestions(query: string): Promise<string[]> {
+	const trimmedQuery = query.trim();
+	
+	// Don't search for very short queries (less than 2 characters)
+	if (trimmedQuery.length < 2) {
+		return [];
+	}
+
+	// Normalize query: remove dashes for API search
+	const normalizedQuery = trimmedQuery.replace(/-/g, '');
+	
+	// Only search if we have at least 2 digits
+	if (!/^\d+$/.test(normalizedQuery)) {
+		return [];
+	}
+
+	const cacheKey = fdaNdcAutocompleteKey(trimmedQuery);
+
+	return deduplicate(cacheKey, async () => {
+		// Check cache
+		const cached = await cache.get<string[]>(cacheKey);
+		if (cached) {
+			logger.debug(`FDA NDC autocomplete cache hit: ${trimmedQuery}`);
+			return cached;
+		}
+
+		try {
+			// Use wildcard search for prefix matching
+			// Search both product_ndc and package_ndc to get comprehensive results
+			const searchQueries = [
+				`?search=product_ndc:${normalizedQuery}*&limit=50`,
+				`?search=package_ndc:${normalizedQuery}*&limit=50`
+			];
+
+			const suggestions = new Set<string>();
+
+			// Search both product_ndc and package_ndc in parallel
+			const searchPromises = searchQueries.map(async (searchQuery) => {
+				try {
+					const response = await makeRequest(searchQuery);
+					
+					if (response.results && response.results.length > 0) {
+						response.results.forEach((result) => {
+							// Add product NDC
+							if (result.product_ndc) {
+								const normalized = normalizeNdc(result.product_ndc);
+								if (normalized) {
+									// Format: "NDC - Drug Name" if available
+									const drugName = result.generic_name || result.brand_name || '';
+									const displayText = drugName 
+										? `${normalized} - ${drugName}` 
+										: normalized;
+									suggestions.add(displayText);
+								}
+							}
+
+							// Add package NDCs
+							if (result.packaging) {
+								result.packaging.forEach((pkg) => {
+									if (pkg.package_ndc) {
+										const normalized = normalizeNdc(pkg.package_ndc);
+										if (normalized) {
+											const drugName = result.generic_name || result.brand_name || '';
+											const displayText = drugName 
+												? `${normalized} - ${drugName}` 
+												: normalized;
+											suggestions.add(displayText);
+										}
+									}
+								});
+							}
+						});
+					}
+				} catch (error) {
+					logger.debug(`FDA NDC autocomplete search failed for: ${searchQuery}`, error as Error);
+					// Don't throw - continue with other search
+				}
+			});
+
+			await Promise.all(searchPromises);
+
+			// Convert to array, sort, and limit to 20
+			const suggestionsArray = Array.from(suggestions)
+				.sort()
+				.slice(0, 20);
+
+			logger.debug(`FDA NDC autocomplete returned ${suggestionsArray.length} suggestions for: ${trimmedQuery}`);
+
+			// Cache result (24 hours TTL, same as FDA package details)
+			await cache.set(cacheKey, suggestionsArray, FDA_PACKAGE_TTL);
+
+			return suggestionsArray;
+		} catch (error) {
+			logger.error(`Error getting NDC autocomplete suggestions for: ${trimmedQuery}`, error as Error);
+			// Return empty array on error (don't expose error details)
+			return [];
 		}
 	});
 }

@@ -89,11 +89,11 @@
 					type="button"
 					on:click={handleCopy}
 					disabled={isCopying}
-					class="p-2 bg-white/20 hover:bg-white/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+					class="p-2.5 bg-white/20 hover:bg-white/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
 					aria-label="Copy NDC code"
 				>
 					<svg
-						class="w-5 h-5 text-white"
+						class="w-6 h-6 text-white"
 						fill="none"
 						stroke="currentColor"
 						viewBox="0 0 24 24"

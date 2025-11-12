@@ -9,6 +9,10 @@
 - ✅ Memory bank initialized
 - ✅ Project structure defined
 
+### Features
+- ✅ Drug name autocomplete (RxNorm + FDA API)
+- ✅ NDC code autocomplete (FDA API with wildcard search) - **NEW**
+
 ## What's Left to Build
 
 ### Phase 0: API Research & Validation (Day 0) - ⚠️ CRITICAL

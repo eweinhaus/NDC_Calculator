@@ -152,9 +152,12 @@ External API interactions are abstracted into service classes:
   - `getAllNdcs()`: RxCUI to NDC list (note: unreliable per Phase 0 findings)
   - `getStrength()`: Strength information retrieval
   - `getSpellingSuggestions()`: Spelling correction suggestions
+  - `getAutocompleteSuggestions()`: Drug name autocomplete suggestions
 - `FDAService`: Handles all FDA API calls (✅ implemented)
   - `getPackageDetails()`: Single NDC package lookup
   - `getAllPackages()`: All packages for product NDC
+  - `getPackagesByRxcui()`: All packages for a given RxCUI
+  - `getNdcAutocompleteSuggestions()`: NDC code autocomplete suggestions (✅ new)
   - Active status determination from `listing_expiration_date`
 - `OpenAIService`: Handles OpenAI API calls (fallback only) (✅ implemented)
   - `parseSig()`: SIG parsing with JSON response validation

@@ -3,6 +3,8 @@
 	import { browser } from '$app/environment';
 	import { fade } from 'svelte/transition';
 	import { debounce } from '../utils/debounce.js';
+	import { detectInputType } from '../utils/inputDetector.js';
+	import type { PreloadData } from '../stores/autocompletePreload.js';
 
 	export let value: string = '';
 	export let placeholder: string = '';
@@ -10,8 +12,9 @@
 	export let label: string = '';
 	export let required: boolean = false;
 	export let error: string | null = null;
-	export let minLength: number = 3; // Minimum characters before showing suggestions (RxNorm API works better with 3+ chars)
+	export let minLength: number = 3; // Default minimum, will be adjusted based on input type
 	export let maxSuggestions: number = 20;
+	export let preloadedData: PreloadData | null = null;
 
 	// Events
 	const dispatch = createEventDispatcher<{
@@ -26,19 +29,91 @@
 	let inputElement: HTMLInputElement | null = null;
 	let dropdownElement: HTMLUListElement | null = null;
 
+	// Detect input type and determine appropriate endpoint and minLength
+	$: inputType = detectInputType(value);
+	$: effectiveMinLength = inputType === 'ndc' ? 2 : minLength;
+	$: autocompleteEndpoint = inputType === 'ndc' ? '/api/autocomplete/ndc' : '/api/autocomplete';
+	$: ariaLabel = inputType === 'ndc' ? 'NDC code suggestions' : 'Drug name suggestions';
+
+	/**
+	 * Filter preloaded data for instant client-side suggestions.
+	 * @param query - Search query
+	 * @param type - Input type ('drug' or 'ndc')
+	 * @returns Filtered suggestions from preloaded data
+	 */
+	function filterPreloadedData(query: string, type: 'drug' | 'ndc'): string[] {
+		if (!preloadedData) {
+			return [];
+		}
+
+		const source = type === 'drug' ? preloadedData.drugs : preloadedData.ndcs;
+		const queryLower = query.toLowerCase().trim();
+
+		if (queryLower.length === 0) {
+			return [];
+		}
+
+		// Case-insensitive prefix matching
+		const matches = source
+			.filter((item) => {
+				const itemLower = item.toLowerCase();
+				// For NDC codes, also check if query matches the normalized format
+				if (type === 'ndc') {
+					// Remove dashes for comparison
+					const itemNormalized = itemLower.replace(/-/g, '');
+					const queryNormalized = queryLower.replace(/-/g, '');
+					return itemLower.startsWith(queryLower) || itemNormalized.startsWith(queryNormalized);
+				}
+				return itemLower.startsWith(queryLower);
+			})
+			.slice(0, maxSuggestions);
+
+		return matches;
+	}
+
 	// Debounced function to fetch suggestions (only on client)
 	const debouncedFetchSuggestions = browser
 		? debounce(async (query: string) => {
-				if (query.length < minLength) {
+				const currentInputType = detectInputType(query);
+				const currentMinLength = currentInputType === 'ndc' ? 2 : minLength;
+				
+				if (query.length < currentMinLength) {
 					suggestions = [];
 					isOpen = false;
 					isLoading = false;
 					return;
 				}
 
+				// Don't fetch if input type is unknown
+				if (currentInputType === 'unknown') {
+					suggestions = [];
+					isOpen = false;
+					isLoading = false;
+					return;
+				}
+
+				// Step 1: Try filtering preloaded data first (instant, no API call)
+				if (preloadedData && (currentInputType === 'drug' || currentInputType === 'ndc')) {
+					const preloadedMatches = filterPreloadedData(
+						query,
+						currentInputType === 'ndc' ? 'ndc' : 'drug'
+					);
+
+					if (preloadedMatches.length > 0) {
+						// Found matches in preloaded data - show immediately
+						suggestions = preloadedMatches;
+						isOpen = suggestions.length > 0;
+						selectedIndex = -1;
+						isLoading = false;
+						return; // No API call needed
+					}
+				}
+
+				// Step 2: No matches in preloaded data - fallback to API
 				isLoading = true;
 				try {
-					const response = await fetch(`/api/autocomplete?q=${encodeURIComponent(query)}`);
+					const endpoint = currentInputType === 'ndc' ? '/api/autocomplete/ndc' : '/api/autocomplete';
+					const response = await fetch(`${endpoint}?q=${encodeURIComponent(query)}`);
 					if (!response.ok) {
 						throw new Error(`HTTP ${response.status}`);
 					}
@@ -70,7 +145,7 @@
 
 	function handleFocus() {
 		// Show suggestions if we have value and suggestions
-		if (value.length >= minLength && suggestions.length > 0) {
+		if (value.length >= effectiveMinLength && suggestions.length > 0) {
 			isOpen = true;
 		}
 	}
@@ -121,7 +196,15 @@
 	}
 
 	function selectSuggestion(suggestion: string) {
-		value = suggestion;
+		// If suggestion is in format "NDC - Drug Name", extract just the NDC part
+		// Format: "00002-3227-30 - Lisinopril" -> "00002-3227-30"
+		const ndcMatch = suggestion.match(/^([\d-]+)\s*-\s*/);
+		if (ndcMatch && inputType === 'ndc') {
+			value = ndcMatch[1].trim();
+		} else {
+			value = suggestion;
+		}
+		
 		suggestions = [];
 		isOpen = false;
 		selectedIndex = -1;
@@ -168,7 +251,7 @@
 	});
 
 	// Close dropdown when value changes externally
-	$: if (value.length < minLength) {
+	$: if (value.length < effectiveMinLength) {
 		isOpen = false;
 		suggestions = [];
 	}
@@ -204,6 +287,7 @@
 			aria-expanded={isOpen}
 			aria-controls={isOpen ? `${id}-suggestions` : undefined}
 			aria-activedescendant={selectedIndex >= 0 ? `${id}-suggestion-${selectedIndex}` : undefined}
+			aria-label={ariaLabel}
 		/>
 		
 		{#if isLoading}
@@ -228,7 +312,7 @@
 			id="{id}-suggestions"
 			role="listbox"
 			class="absolute z-50 w-full mt-1 bg-white border-2 border-gray-300 rounded-xl shadow-lg max-h-60 overflow-auto"
-			aria-label="Drug name suggestions"
+			aria-label={ariaLabel}
 		>
 			{#each suggestions as suggestion, index}
 				<li
