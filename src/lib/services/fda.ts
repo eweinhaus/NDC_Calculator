@@ -1359,30 +1359,25 @@ export async function getNdcAutocompleteSuggestions(query: string): Promise<stri
 					
 					if (response.results && response.results.length > 0) {
 						response.results.forEach((result) => {
-							// Add product NDC
-							if (result.product_ndc) {
-								const normalized = normalizeNdc(result.product_ndc);
-								if (normalized) {
-									// Format: "NDC - Drug Name" if available
-									const drugName = result.generic_name || result.brand_name || '';
-									const displayText = drugName 
-										? `${normalized} - ${drugName}` 
-										: normalized;
-									suggestions.add(displayText);
-								}
-							}
-
-							// Add package NDCs
-							if (result.packaging) {
+							// Only add package NDCs (not product NDCs) to ensure they exist in FDA database
+							// Package NDCs are the actual dispense units and are guaranteed to be in packaging array
+							if (result.packaging && result.packaging.length > 0) {
 								result.packaging.forEach((pkg) => {
-									if (pkg.package_ndc) {
+									// Only include if package_ndc exists and has description (valid package)
+									if (pkg.package_ndc && pkg.description) {
 										const normalized = normalizeNdc(pkg.package_ndc);
-										if (normalized) {
-											const drugName = result.generic_name || result.brand_name || '';
-											const displayText = drugName 
-												? `${normalized} - ${drugName}` 
-												: normalized;
-											suggestions.add(displayText);
+										// Validate: normalized NDC must match expected format (XXXXX-XXXX-XX)
+										// and must be different from product NDC (to avoid duplicates)
+										if (normalized && normalized.match(/^\d{5}-\d{4}-\d{2}$/)) {
+											// Ensure it's not just a product NDC (must have package code)
+											const productNdc = normalizeNdc(result.product_ndc);
+											if (productNdc && normalized !== productNdc) {
+												const drugName = result.generic_name || result.brand_name || '';
+												const displayText = drugName 
+													? `${normalized} - ${drugName}` 
+													: normalized;
+												suggestions.add(displayText);
+											}
 										}
 									}
 								});

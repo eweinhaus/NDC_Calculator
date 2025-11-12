@@ -23,7 +23,7 @@ function normalizeSig(sig: string): string {
 		.toLowerCase()
 		.trim()
 		.replace(/\s+/g, ' ') // Replace multiple spaces with single space
-		.replace(/[.,;:]/g, '') // Remove common punctuation
+		.replace(/[;,:]/g, '') // Remove common punctuation except decimal points
 		.trim();
 }
 
@@ -75,6 +75,25 @@ function extractUnit(sig: string, pattern?: SigPattern): string | null {
 			return unitPattern.normalized;
 		}
 	}
+
+	const normalizedSig = sig.toLowerCase();
+
+	// Handle numbers immediately followed by liquid units (e.g., "0.3ml", "1cc")
+	const fusedLiquidMatch = normalizedSig.match(/\d+(?:\.\d+)?\s*(ml|milliliter|milliliters|millilitre|millilitres|cc|ccs)\b/);
+	if (fusedLiquidMatch) {
+		return 'mL';
+	}
+
+	// Additional heuristics for injection instructions lacking explicit units
+	if (normalizedSig.includes('inject')) {
+		if (/\bunits?\b/.test(normalizedSig) || /\bu\b/.test(normalizedSig) || /\biu\b/.test(normalizedSig)) {
+			return 'unit';
+		}
+		if (/\b(?:ml|milliliter|milliliters|millilitre|millilitres|cc|ccs)\b/.test(normalizedSig)) {
+			return 'mL';
+		}
+	}
+
 	return null;
 }
 

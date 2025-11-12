@@ -72,7 +72,7 @@
 <button
 	type="button"
 	on:click={openModal}
-	class="w-full flex items-center justify-between p-3 bg-offwhite-warm rounded-md shadow-sm border-2 border-red-600 hover:bg-red-600 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 transition-all group"
+	class="w-full flex items-center justify-between p-3 bg-white rounded-md shadow-sm border-2 border-red-600 hover:bg-red-600 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 transition-all group"
 	aria-label="View alternative NDCs ({alternatives?.length || 0})"
 >
 	<div class="flex items-center gap-3">
@@ -143,11 +143,11 @@
 			</div>
 
 			<!-- Modal Body -->
-			<div class="p-4 overflow-y-auto flex-1">
+			<div class="p-4 overflow-y-auto flex-1 bg-offwhite-warm">
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 					{#each alternatives as alternative, index (index + '-' + alternative.ndc)}
 						<div
-							class="bg-offwhite-warm border-2 border-red-600 rounded-md p-3 hover:border-red-700 hover:shadow-md cursor-pointer transition-all group"
+							class="bg-white border-2 border-red-600 rounded-md p-3 hover:border-red-700 hover:shadow-md cursor-pointer transition-all group"
 							on:click={() => handleSelect(alternative)}
 							role="button"
 							tabindex="0"

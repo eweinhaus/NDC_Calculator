@@ -54,8 +54,11 @@ export const UNIT_PATTERNS: UnitPattern[] = [
 	{ pattern: /\bpills?\b/i, normalized: 'pill' },
 	// Liquids
 	{ pattern: /\bml\b/i, normalized: 'mL' },
+	{ pattern: /\bmls?\b/i, normalized: 'mL' },
 	{ pattern: /\bl\b/i, normalized: 'L' },
 	{ pattern: /\bliters?\b/i, normalized: 'L' },
+	{ pattern: /\bmillilitres?\b/i, normalized: 'mL' },
+	{ pattern: /\bccs?\b/i, normalized: 'mL' },
 	// Units (insulin, etc.)
 	{ pattern: /\bunits?\b/i, normalized: 'unit' },
 	{ pattern: /\bu\b/i, normalized: 'unit' },
@@ -344,6 +347,16 @@ const SIG_PATTERNS_RAW: SigPattern[] = [
 		priority: 11,
 		dosageGroup: 1,
 		unitGroup: 0, // Fixed: 'unit'
+		frequencyGroup: 2,
+	},
+	// Pattern 18b: "Inject X mL (or cc) [route] [frequency]" - Injection volume
+	{
+		pattern:
+			/inject\s+(\d+(?:\.\d+)?)\s*(?:ml|cc)\s*(?:subcutaneously|intramuscularly|intravenously|subq|sc|im|iv)?(?:\s+(.*))?/i,
+		name: 'inject_volume_frequency',
+		priority: 11,
+		dosageGroup: 1,
+		unitGroup: 0, // Fixed: 'mL'
 		frequencyGroup: 2,
 	},
 	// Pattern 19: "X units subcutaneously [frequency]" - Insulin (without "Inject")

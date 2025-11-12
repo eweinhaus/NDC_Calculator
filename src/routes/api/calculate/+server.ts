@@ -78,36 +78,75 @@ export const POST: RequestHandler = async ({ request }) => {
 		let rxcui: string | null = null;
 		let drugName: string | null = null;
 		let packageDetails: FdaPackageDetails | null = null; // Declare outside if block for later use
+		let isProductNdc = false;
+		let isPackageNdc = false;
 
 		if (inputType === 'ndc') {
 			// NOTE: The drug-name workflow begins by normalizing against RxNorm to obtain an RxCUI.
 			// Historically the NDC workflow bypassed that step and relied solely on FDA package metadata.
 			// To keep behaviour aligned (and improve resilience), we now fall back to an explicit
 			// RxNorm NDC→RxCUI lookup whenever the FDA path cannot provide the identifier.
-			// Input is an NDC code - get package details and extract RxCUI
-			console.error('🔍 [CALCULATE] Detected NDC code, fetching package details', { 
+			// Input is an NDC code - detect if it's a product NDC (XXXXX-XXXX) or package NDC (XXXXX-XXXX-XX)
+			const ndcParts = trimmedInput.split('-');
+			isProductNdc = ndcParts.length === 2; // Product NDC: XXXXX-XXXX
+			isPackageNdc = ndcParts.length === 3; // Package NDC: XXXXX-XXXX-XX
+			
+			console.error('🔍 [CALCULATE] Detected NDC code', { 
 				ndc: trimmedInput,
-				inputType 
+				inputType,
+				isProductNdc,
+				isPackageNdc,
+				parts: ndcParts.length
 			});
-			console.log('🔍 [CALCULATE] Detected NDC code, fetching package details', { ndc: trimmedInput });
-			logger.debug('Detected NDC code, fetching package details', { ndc: trimmedInput });
-			try {
-				console.error('📞 [CALCULATE] Calling getPackageDetails() for NDC:', trimmedInput);
-				packageDetails = await getPackageDetails(trimmedInput);
-				console.error('📥 [CALCULATE] getPackageDetails() returned:', {
-					found: !!packageDetails,
-					packageNdc: packageDetails?.package_ndc,
-					productNdc: packageDetails?.product_ndc,
-					hasRxcui: packageDetails?.rxcui?.length ? true : false,
-					rxcui: packageDetails?.rxcui
-				});
-			} catch (error) {
-				console.error('❌ [CALCULATE] Error fetching package details for NDC:', {
-					ndc: trimmedInput,
-					error: error instanceof Error ? error.message : String(error),
-					stack: error instanceof Error ? error.stack : undefined
-				});
-				logger.error('Error fetching package details for NDC', error as Error, { ndc: trimmedInput });
+			logger.debug('Detected NDC code', { ndc: trimmedInput, isProductNdc, isPackageNdc });
+			
+			if (isProductNdc) {
+				// Product NDC: Get all packages for this product
+				console.error('📦 [CALCULATE] Product NDC detected, fetching all packages', { productNdc: trimmedInput });
+				logger.info('Product NDC detected, fetching all packages', { productNdc: trimmedInput });
+				try {
+					const allPackages = await getAllPackages(trimmedInput);
+					if (allPackages && allPackages.length > 0) {
+						// Use first package to get metadata
+						packageDetails = allPackages[0];
+						console.error('✅ [CALCULATE] Got packages for product NDC', {
+							productNdc: trimmedInput,
+							packageCount: allPackages.length,
+							firstPackageNdc: packageDetails.package_ndc
+						});
+					}
+				} catch (error) {
+					console.error('❌ [CALCULATE] Error fetching packages for product NDC:', {
+						productNdc: trimmedInput,
+						error: error instanceof Error ? error.message : String(error)
+					});
+					logger.error('Error fetching packages for product NDC', error as Error, { productNdc: trimmedInput });
+				}
+			} else if (isPackageNdc) {
+				// Package NDC: Get specific package details
+				console.error('📦 [CALCULATE] Package NDC detected, fetching package details', { packageNdc: trimmedInput });
+				logger.debug('Package NDC detected, fetching package details', { packageNdc: trimmedInput });
+				try {
+					console.error('📞 [CALCULATE] Calling getPackageDetails() for NDC:', trimmedInput);
+					packageDetails = await getPackageDetails(trimmedInput);
+					console.error('📥 [CALCULATE] getPackageDetails() returned:', {
+						found: !!packageDetails,
+						packageNdc: packageDetails?.package_ndc,
+						productNdc: packageDetails?.product_ndc,
+						hasRxcui: packageDetails?.rxcui?.length ? true : false,
+						rxcui: packageDetails?.rxcui
+					});
+				} catch (error) {
+					console.error('❌ [CALCULATE] Error fetching package details for NDC:', {
+						ndc: trimmedInput,
+						error: error instanceof Error ? error.message : String(error),
+						stack: error instanceof Error ? error.stack : undefined
+					});
+					logger.error('Error fetching package details for NDC', error as Error, { ndc: trimmedInput });
+				}
+			} else {
+				console.error('⚠️ [CALCULATE] Invalid NDC format', { ndc: trimmedInput, parts: ndcParts.length });
+				logger.warn('Invalid NDC format', { ndc: trimmedInput, parts: ndcParts.length });
 			}
 
 			if (packageDetails) {
@@ -248,22 +287,31 @@ export const POST: RequestHandler = async ({ request }) => {
 				drugInput: body.drugInput.trim() 
 			});
 			fdaPackages = await getPackagesByRxcui(rxcui);
-		} else if (inputType === 'ndc' && packageDetails && packageDetails.product_ndc) {
-			// No RxCUI, but we have package details - fetch all packages for this product NDC
-			console.error('🔍 [CALCULATE] Fetching NDCs from FDA API by product NDC (no RxCUI available)', {
-				productNdc: packageDetails.product_ndc,
-				drugInput: body.drugInput.trim()
-			});
-			logger.info('Fetching NDCs from FDA API by product NDC', {
-				productNdc: packageDetails.product_ndc,
-				drugInput: body.drugInput.trim()
-			});
-			fdaPackages = await getAllPackages(packageDetails.product_ndc);
+		} else if (inputType === 'ndc') {
+			// No RxCUI, but we have an NDC input - determine product NDC
+			const productNdc = isProductNdc ? trimmedInput : (packageDetails?.product_ndc || null);
 			
-			// If we got packages, we can extract drug name from the first package
-			if (fdaPackages.length > 0 && !drugName) {
-				// Try to get drug name from package metadata or use NDC as fallback
-				drugName = trimmedInput;
+			if (productNdc) {
+				// Fetch all packages for this product NDC
+				console.error('🔍 [CALCULATE] Fetching NDCs from FDA API by product NDC (no RxCUI available)', {
+					productNdc,
+					drugInput: body.drugInput.trim(),
+					wasProductNdc: isProductNdc
+				});
+				logger.info('Fetching NDCs from FDA API by product NDC', {
+					productNdc,
+					drugInput: body.drugInput.trim()
+				});
+				fdaPackages = await getAllPackages(productNdc);
+				
+				// If we got packages, we can extract drug name from the first package
+				if (fdaPackages.length > 0 && !drugName) {
+					// Try to get drug name from package metadata or use NDC as fallback
+					drugName = trimmedInput;
+				}
+			} else if (isPackageNdc && packageDetails) {
+				// We have a package NDC but no product NDC - use the single package we found
+				fdaPackages = [packageDetails];
 			}
 		}
 
@@ -293,7 +341,9 @@ export const POST: RequestHandler = async ({ request }) => {
 				success: false,
 				error: {
 					code: 'NO_NDCS_FOUND',
-					message: 'No active NDCs found for this drug. The drug may be discontinued or unavailable.',
+					message: inputType === 'drug' 
+						? `"${body.drugInput.trim()}" is recognized but has no NDCs available in the FDA database. This drug may be very new, discontinued, or not available in the US market.`
+						: 'No active NDCs found for this drug. The drug may be discontinued or unavailable.',
 					details: {
 						rxcui,
 						drugInput: body.drugInput.trim(),

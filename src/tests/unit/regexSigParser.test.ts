@@ -279,6 +279,26 @@ describe('Regex SIG Parser', () => {
 				});
 			});
 
+			describe('injection volume patterns', () => {
+				it('should parse "Inject X mL [route] once daily"', () => {
+					const result = parse('Inject 0.3 mL subcutaneously once daily');
+					expect(result).not.toBeNull();
+					expect(result?.dosage).toBeCloseTo(0.3, 5);
+					expect(result?.frequency).toBe(1);
+					expect(result?.unit).toBe('mL');
+					expect(result?.dosageForm).toBe('liquid');
+				});
+
+				it('should parse "Inject Xcc once daily" without space', () => {
+					const result = parse('Inject 0.3cc once daily');
+					expect(result).not.toBeNull();
+					expect(result?.dosage).toBeCloseTo(0.3, 5);
+					expect(result?.frequency).toBe(1);
+					expect(result?.unit).toBe('mL');
+					expect(result?.dosageForm).toBe('liquid');
+				});
+			});
+
 			describe('inhaler patterns', () => {
 				it('should parse "Inhale X puffs twice daily"', () => {
 					const result = parse('Inhale 2 puffs twice daily');

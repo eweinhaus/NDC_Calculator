@@ -117,7 +117,7 @@
 			<button
 				type="button"
 				on:click={() => alternativeNdcsComponent?.openModal()}
-				class="flex-1 flex items-center justify-between p-3 bg-offwhite-warm rounded-md shadow-sm border-2 border-red-600 hover:bg-red-600 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 transition-all group"
+				class="flex-1 flex items-center justify-between p-3 bg-white rounded-md shadow-sm border-2 border-red-600 hover:bg-red-600 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 transition-all group"
 				aria-label="View alternative NDCs ({results.alternatives?.length || 0})"
 			>
 				<div class="flex items-center gap-3">

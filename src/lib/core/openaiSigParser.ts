@@ -23,7 +23,7 @@ function normalizeSig(sig: string): string {
 		.toLowerCase()
 		.trim()
 		.replace(/\s+/g, ' ') // Replace multiple spaces with single space
-		.replace(/[.,;:]/g, '') // Remove common punctuation
+		.replace(/[;,:]/g, '') // Remove common punctuation except decimal points
 		.trim();
 }
 
