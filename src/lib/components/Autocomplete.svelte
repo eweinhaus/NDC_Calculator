@@ -175,12 +175,14 @@
 </script>
 
 <div class="relative">
-	<label for={id} class="block mb-2 font-semibold text-gray-700 text-sm md:text-base">
-		{label}
-		{#if required}
-			<span class="text-red-500" aria-label="required">*</span>
-		{/if}
-	</label>
+	{#if label}
+		<label for={id} class="block mb-2 font-semibold text-gray-700 text-sm md:text-base">
+			{label}
+			{#if required}
+				<span class="text-red-500" aria-label="required">*</span>
+			{/if}
+		</label>
+	{/if}
 	
 	<div class="relative">
 		<input
@@ -195,7 +197,7 @@
 			on:focus={handleFocus}
 			on:blur={handleBlur}
 			on:keydown={handleKeyDown}
-			class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors {error ? 'border-red-500 focus:ring-red-500' : ''}"
+			class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-primary focus:border-teal-primary transition-colors {error ? 'border-red-500 focus:ring-red-500' : ''}"
 			aria-invalid={error ? 'true' : 'false'}
 			aria-describedby={error ? `${id}-error` : undefined}
 			aria-autocomplete="list"
@@ -206,7 +208,7 @@
 		
 		{#if isLoading}
 			<div class="absolute right-3 top-1/2 -translate-y-1/2" aria-label="Loading suggestions">
-				<svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+				<svg class="animate-spin h-5 w-5 text-teal-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
 					<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
 					<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
 				</svg>
@@ -234,7 +236,7 @@
 					role="option"
 					tabindex="-1"
 					aria-selected={selectedIndex === index}
-					class="px-4 py-2 cursor-pointer transition-colors {selectedIndex === index ? 'bg-blue-100 text-blue-900' : 'hover:bg-gray-100 text-gray-900'}"
+					class="px-4 py-2 cursor-pointer transition-colors {selectedIndex === index ? 'bg-teal-soft-bg text-teal-dark' : 'hover:bg-gray-100 text-gray-900'}"
 					on:click={() => selectSuggestion(suggestion)}
 					on:keydown={(e) => {
 						if (e.key === 'Enter' || e.key === ' ') {

@@ -29,6 +29,25 @@
 
 ## Recent Changes
 
+- ✅ **UI Layout Optimization - Side-by-Side Layout:** Restructured UI to side-by-side layout with reduced vertical spacing
+  - ✅ Changed from vertical stacked layout to horizontal two-column layout (form left, results right)
+  - ✅ Form column: Fixed 480px width, sticky positioning on desktop (≥1024px)
+  - ✅ Results column: Flexible width, scrollable content area
+  - ✅ Reduced vertical spacing throughout: form padding (p-8→p-6), field spacing (space-y-7→space-y-5), component margins
+  - ✅ Reduced spacing in all results components: RecommendedNdc, DrugInfoCard, QuantityBreakdown, AlternativeNdcs, WarningsSection, InactiveNdcsList
+  - ✅ Maintained responsive design: single column on mobile/tablet (<1024px), side-by-side on desktop (≥1024px)
+  - ✅ Form minimize behavior adjusted for side-by-side layout
+  - ✅ All functionality preserved, layout validated with browser testing
+- ✅ **UI Redesign - Teal/Cyan Theme:** Complete UI redesign with new color scheme and layout structure
+  - ✅ Updated Tailwind configuration with custom teal/cyan color palette
+  - ✅ Changed from blue theme to teal/cyan theme throughout application
+  - ✅ Redesigned RecommendedNdc component as hero section (full-width, prominent display)
+  - ✅ Restructured ResultsDisplay layout: Recommended NDC first, then supporting info in two-column layout
+  - ✅ Updated all components to use teal theme (DrugInfoCard, QuantityBreakdown, AlternativeNdcs, ErrorDisplay, Autocomplete, SkeletonLoader)
+  - ✅ Updated form inputs and buttons to use teal focus states and colors
+  - ✅ Added soft teal background to main page container
+  - ✅ One-page app layout structure implemented
+  - ✅ Build successful, all components updated
 - ✅ **SIG AI Fallback Feature:** Implemented AI-powered rewrite fallback for SIG parsing
   - ✅ Added `rewriteSig()` function to OpenAI service with caching and error handling
   - ✅ Modified `sigParser.ts` to use rewrite fallback when both parsers fail

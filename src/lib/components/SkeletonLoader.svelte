@@ -106,7 +106,7 @@
 				</div>
 			</div>
 			<!-- Recommended NDC skeleton -->
-			<div class="bg-blue-50 border-2 border-blue-500 rounded-lg shadow p-4">
+			<div class="bg-teal-soft-bg border-2 border-teal-primary rounded-lg shadow p-4">
 				<div class="h-6 w-40 shimmer rounded mb-3"></div>
 				<div class="space-y-2">
 					<div class="h-4 w-48 shimmer rounded"></div>

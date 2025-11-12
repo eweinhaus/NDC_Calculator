@@ -95,7 +95,7 @@
 							<button
 								type="button"
 								on:click={() => handleSuggestion(suggestion)}
-								class="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 text-sm rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+								class="px-3 py-1 bg-teal-soft-bg hover:bg-teal-light text-teal-dark text-sm rounded transition-colors focus:outline-none focus:ring-2 focus:ring-teal-primary"
 							>
 								{suggestion}
 							</button>
@@ -116,7 +116,7 @@
 					type="button"
 					on:click={handleRetry}
 					disabled={!canRetry}
-					class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+					class="px-4 py-2 bg-teal-primary text-white rounded-md hover:bg-teal-dark disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-teal-primary"
 				>
 					{#if showCountdown && remainingSeconds > 0}
 						Retry in {remainingSeconds} second{remainingSeconds !== 1 ? 's' : ''}...

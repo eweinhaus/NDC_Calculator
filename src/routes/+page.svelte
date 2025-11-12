@@ -7,7 +7,6 @@
 	import Toast from '../lib/components/Toast.svelte';
 	import Autocomplete from '../lib/components/Autocomplete.svelte';
 	import { debounce } from '../lib/utils/debounce.js';
-	import { openPdfInNewTab } from '../lib/utils/pdfGenerator.js';
 	import { showToast } from '../lib/stores/toast.js';
 
 	// Form state
@@ -236,19 +235,6 @@
 		}, 100);
 	}
 
-	function handleOpenPdfInNewTab() {
-		if (results) {
-			try {
-				openPdfInNewTab(results);
-				showToast('PDF opened in new tab', 'success');
-			} catch (error) {
-				console.error('PDF open error:', error);
-				const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-				showToast(`Failed to open PDF: ${errorMsg}`, 'error');
-			}
-		}
-	}
-
 	// Scroll to top when results appear
 	$: if (results) {
 		setTimeout(() => {
@@ -261,15 +247,20 @@
 	<title>NDC Packaging & Quantity Calculator</title>
 </svelte:head>
 
-<div class="container mx-auto max-w-7xl p-4 md:p-6 lg:p-8">
-	<header class="mb-8 text-center">
-		<div class="inline-flex items-center justify-center mb-4">
-			<svg class="w-10 h-10 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-			</svg>
-			<h1 class="text-4xl md:text-5xl font-extrabold text-gray-900">
-				NDC Calculator
-			</h1>
+<div class="min-h-screen bg-teal-soft-bg pb-8">
+	<div class="w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-8">
+	<header class="mb-6 text-center">
+		<div class="mb-4 relative flex justify-center">
+			<div class="flex items-center gap-3">
+				<svg class="w-10 h-10 text-teal-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+				</svg>
+				<h1 class="text-4xl md:text-5xl font-extrabold text-gray-900">
+					NDC Calculator
+				</h1>
+				<!-- Invisible spacer to balance the icon on the left -->
+				<div class="w-10 h-10" aria-hidden="true"></div>
+			</div>
 		</div>
 		<p class="text-gray-600 text-base md:text-lg max-w-2xl mx-auto">
 			Calculate optimal NDC selections and quantities from prescription instructions
@@ -277,95 +268,131 @@
 	</header>
 
 	<main id="main-content">
-		{#if !results && !error}
-			<div class="max-w-3xl mx-auto">
-				<form on:submit|preventDefault={handleSubmit} class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 md:p-8 space-y-5">
-					<div class="form-group">
-						<Autocomplete
-							id="drugInput"
-							bind:value={drugInput}
-							label="Drug Name or NDC"
-							placeholder="e.g., Lisinopril or 00002-3227-30"
-							required={true}
-							error={shouldShowError('drugInput') ? errors.drugInput : null}
-							on:input={(event) => {
-								drugInput = event.detail;
-							}}
-							on:blur={() => handleBlur('drugInput')}
-							minLength={3}
-							maxSuggestions={20}
-						/>
-					</div>
+		<!-- Two-column layout: Form on left, Results on right -->
+		<div class="grid grid-cols-1 lg:grid-cols-[480px_1fr] gap-6 lg:gap-8">
+			<!-- Left Column: Calculation Form (Sticky) -->
+			<div id="calculation-form" class="lg:sticky lg:top-4 lg:self-start">
+				<div class="bg-white rounded-2xl shadow-xl border-2 border-gray-100 overflow-hidden">
+					<!-- Form Content - Always Visible -->
+					<form on:submit|preventDefault={handleSubmit} class="p-6 space-y-5">
+						<!-- Drug Name Field -->
+						<div class="form-group">
+							<label for="drugInput" class="flex items-center gap-2 mb-2 font-semibold text-gray-800 text-base">
+								<svg class="w-5 h-5 text-teal-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+								</svg>
+								Drug Name or NDC
+								<span class="text-red-500" aria-label="required">*</span>
+							</label>
+							<Autocomplete
+								id="drugInput"
+								bind:value={drugInput}
+								label=""
+								placeholder="e.g., Lisinopril or 00002-3227-30"
+								required={true}
+								error={shouldShowError('drugInput') ? errors.drugInput : null}
+								on:input={(event) => {
+									drugInput = event.detail;
+								}}
+								on:blur={() => handleBlur('drugInput')}
+								minLength={3}
+								maxSuggestions={20}
+							/>
+							<p class="text-sm text-gray-500 mt-1.5">Enter the medication name or NDC code (e.g., 00002-3227-30)</p>
+							{#if shouldShowError('drugInput')}
+								<span class="block text-red-600 text-sm mt-1.5 font-medium" role="alert">
+									{errors.drugInput}
+								</span>
+							{/if}
+						</div>
 
-					<div class="form-group">
-						<label for="sig" class="block mb-2 font-semibold text-gray-700 text-sm md:text-base">
-							SIG (Prescription Instructions)
-							<span class="text-red-500" aria-label="required">*</span>
-						</label>
-						<textarea
-							id="sig"
-							bind:value={sig}
-							on:blur={() => handleBlur('sig')}
-							placeholder="e.g., Take 1 tablet by mouth twice daily"
-							rows="3"
-							class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none {shouldShowError('sig') ? 'border-red-500 focus:ring-red-500' : ''}"
-							aria-invalid={shouldShowError('sig') ? 'true' : 'false'}
-							aria-describedby={shouldShowError('sig') ? 'sig-error' : undefined}
-							aria-required="true"
-							required
-						></textarea>
-						{#if shouldShowError('sig')}
-							<span id="sig-error" class="block text-red-600 text-sm mt-1.5 font-medium" role="alert">
-								{errors.sig}
-							</span>
-						{/if}
-					</div>
+						<!-- SIG Field -->
+						<div class="form-group">
+							<label for="sig" class="flex items-center gap-2 mb-2 font-semibold text-gray-800 text-base">
+								<svg class="w-5 h-5 text-teal-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+								</svg>
+								SIG (Prescription Instructions)
+								<span class="text-red-500" aria-label="required">*</span>
+							</label>
+							<input
+								id="sig"
+								type="text"
+								bind:value={sig}
+								on:blur={() => handleBlur('sig')}
+								placeholder="e.g., Take 1 tablet by mouth twice daily"
+								class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-primary focus:border-teal-primary focus:bg-teal-soft-bg/30 transition-all {shouldShowError('sig') ? 'border-red-500 focus:ring-red-500' : ''}"
+								aria-invalid={shouldShowError('sig') ? 'true' : 'false'}
+								aria-describedby={shouldShowError('sig') ? 'sig-error' : undefined}
+								aria-required="true"
+								required
+							/>
+							<p class="text-sm text-gray-500 mt-1.5">Enter the prescription instructions as written by the prescriber</p>
+							{#if shouldShowError('sig')}
+								<span id="sig-error" class="block text-red-600 text-sm mt-1.5 font-medium" role="alert">
+									{errors.sig}
+								</span>
+							{/if}
+						</div>
 
-					<div class="form-group">
-						<label for="daysSupply" class="block mb-2 font-semibold text-gray-700 text-sm md:text-base">
-							Days' Supply
-							<span class="text-red-500" aria-label="required">*</span>
-						</label>
-						<input
-							id="daysSupply"
-							type="number"
-							bind:value={daysSupply}
-							on:blur={() => handleBlur('daysSupply')}
-							min="1"
-							max="365"
-							placeholder="e.g., 30"
-							class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors {shouldShowError('daysSupply') ? 'border-red-500 focus:ring-red-500' : ''}"
-							aria-invalid={shouldShowError('daysSupply') ? 'true' : 'false'}
-							aria-describedby={shouldShowError('daysSupply') ? 'daysSupply-error' : undefined}
-							aria-required="true"
-							required
-						/>
-						{#if shouldShowError('daysSupply')}
-							<span id="daysSupply-error" class="block text-red-600 text-sm mt-1.5 font-medium" role="alert">
-								{errors.daysSupply}
-							</span>
-						{/if}
-					</div>
+						<!-- Days Supply Field -->
+						<div class="form-group">
+							<label for="daysSupply" class="flex items-center gap-2 mb-2 font-semibold text-gray-800 text-base">
+								<svg class="w-5 h-5 text-teal-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+								</svg>
+								Days' Supply
+								<span class="text-red-500" aria-label="required">*</span>
+							</label>
+							<input
+								id="daysSupply"
+								type="number"
+								bind:value={daysSupply}
+								on:blur={() => handleBlur('daysSupply')}
+								min="1"
+								max="365"
+								placeholder="e.g., 30"
+								class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-primary focus:border-teal-primary focus:bg-teal-soft-bg/30 transition-all {shouldShowError('daysSupply') ? 'border-red-500 focus:ring-red-500' : ''}"
+								aria-invalid={shouldShowError('daysSupply') ? 'true' : 'false'}
+								aria-describedby={shouldShowError('daysSupply') ? 'daysSupply-error' : undefined}
+								aria-required="true"
+								required
+							/>
+							<p class="text-sm text-gray-500 mt-1.5">Number of days the prescription should last (1-365 days)</p>
+							{#if shouldShowError('daysSupply')}
+								<span id="daysSupply-error" class="block text-red-600 text-sm mt-1.5 font-medium" role="alert">
+									{errors.daysSupply}
+								</span>
+							{/if}
+						</div>
 
-					<button
-						type="submit"
-						disabled={!isValid || isLoading}
-						class="w-full md:w-auto md:min-w-[140px] px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-md hover:shadow-lg min-h-[48px] text-base"
-					>
-						{isLoading ? 'Calculating...' : 'Calculate'}
-					</button>
-				</form>
+						<!-- Calculate Button -->
+						<div class="pt-1">
+							<button
+								type="submit"
+								disabled={!isValid || isLoading}
+								class="w-full px-6 py-3 bg-teal-primary text-white font-semibold text-base rounded-xl hover:bg-teal-dark disabled:bg-gray-400 disabled:cursor-not-allowed transition-all focus:outline-none focus:ring-2 focus:ring-teal-primary focus:ring-offset-2 shadow-lg hover:shadow-xl min-h-[44px] flex items-center justify-center gap-2"
+							>
+								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+								</svg>
+								{isLoading ? 'Calculating...' : 'Calculate'}
+							</button>
+						</div>
+					</form>
+				</div>
 			</div>
-		{/if}
 
+			<!-- Right Column: Results Area -->
+			<div class="min-w-0 flex flex-col">
 		{#if isLoading}
-			<div class="mt-8" transition:fade>
+			<div transition:fade>
 				<SkeletonLoader type="results" />
 			</div>
 		{/if}
 
 		{#if error && !isLoading}
-			<div class="mt-8 max-w-2xl mx-auto" transition:fade>
+			<div class="max-w-2xl" transition:fade>
 				<ErrorDisplay
 					{error}
 					{suggestions}
@@ -376,44 +403,14 @@
 		{/if}
 
 		{#if results && !isLoading}
-			<div class="mt-6" transition:fade>
-				<div class="mb-5 flex flex-wrap justify-end gap-3">
-					<button
-						type="button"
-						on:click={handleOpenPdfInNewTab}
-						class="px-5 py-2.5 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-all focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm md:text-base min-h-[44px] flex items-center gap-2 shadow-md hover:shadow-lg"
-						title="Open PDF in a new tab"
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-5 w-5"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-							/>
-						</svg>
-						View PDF
-					</button>
-					<button
-						type="button"
-						on:click={handleCalculateAgain}
-						class="px-5 py-2.5 bg-gray-600 text-white font-semibold rounded-xl hover:bg-gray-700 transition-all focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm md:text-base min-h-[44px] shadow-md hover:shadow-lg"
-					>
-						Calculate Another
-					</button>
-				</div>
-				<div class="max-w-7xl mx-auto">
-					<ResultsDisplay results={results} />
-				</div>
+			<div transition:fade class="flex-1">
+				<ResultsDisplay results={results} />
 			</div>
 		{/if}
+			</div>
+		</div>
 	</main>
+	</div>
 </div>
 
 <Toast />

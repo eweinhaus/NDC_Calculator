@@ -1,7 +1,70 @@
 <script lang="ts">
+	import { fade, fly } from 'svelte/transition';
+	import { onDestroy } from 'svelte';
 	import type { Warning } from '../../types/warning.js';
 
 	export let warnings: Warning[];
+	export let showButton = false; // Allow parent to control button visibility
+
+	let isOpen = false;
+	let hasBeenDismissed = false;
+	let previousWarningsKey = '';
+	let modalElement: HTMLDivElement;
+	let understandButtonElement: HTMLButtonElement;
+
+	// Create a unique key for the current warnings set
+	$: warningsKey = warnings && warnings.length > 0 
+		? warnings.map(w => `${w.type}-${w.message}`).join('|')
+		: '';
+
+	// Reset dismissed state when warnings change (new calculation with different warnings)
+	$: if (warningsKey !== previousWarningsKey) {
+		hasBeenDismissed = false;
+		previousWarningsKey = warningsKey;
+	}
+
+	// Open modal when warnings are present (only if not previously dismissed)
+	$: if (warnings && warnings.length > 0 && !hasBeenDismissed) {
+		isOpen = true;
+	}
+
+	// Lock body scroll when modal is open
+	$: if (isOpen) {
+		document.body.style.overflow = 'hidden';
+	} else {
+		document.body.style.overflow = '';
+	}
+
+	// Cleanup on component destroy
+	onDestroy(() => {
+		document.body.style.overflow = '';
+	});
+
+	// Focus management
+	$: if (isOpen && understandButtonElement) {
+		// Focus "I Understand" button when modal opens
+		setTimeout(() => {
+			understandButtonElement?.focus();
+		}, 100);
+	}
+
+	export function openModal() {
+		if (warnings && warnings.length > 0) {
+			isOpen = true;
+			hasBeenDismissed = false;
+		}
+	}
+
+	function closeModal() {
+		isOpen = false;
+		hasBeenDismissed = true;
+	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') {
+			closeModal();
+		}
+	}
 
 	function getSeverityClasses(severity: Warning['severity']) {
 		switch (severity) {
@@ -30,42 +93,93 @@
 	}
 </script>
 
-{#if warnings && warnings.length > 0}
-	<div class="space-y-3" role={warnings.some((w) => w.severity === 'error') ? 'alert' : 'status'}>
-		<h3 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-			<svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+{#if showButton && warnings && warnings.length > 0}
+<!-- Button to open modal -->
+<button
+	type="button"
+	on:click={openModal}
+	class="w-full flex items-center justify-between p-3 bg-white rounded-xl shadow-lg border-2 border-amber-500 hover:bg-amber-50 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all group"
+	aria-label="View warnings ({warnings?.length || 0})"
+>
+	<div class="flex items-center gap-3">
+		<div class="p-2 bg-amber-500 rounded-lg group-hover:bg-amber-600 transition-colors">
+			<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
 			</svg>
-			Warnings & Notices
-		</h3>
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-			{#each warnings as warning (warning.message)}
-				<div
-					class="border-2 rounded-xl p-4 shadow-sm {getSeverityClasses(warning.severity)}"
-					role={warning.severity === 'error' ? 'alert' : 'status'}
+		</div>
+		<div class="text-left">
+			<h3 class="text-base font-bold text-gray-900 group-hover:text-amber-600 transition-colors">
+				Warnings & Notices
+			</h3>
+			<p class="text-xs text-gray-500 mt-0.5">{warnings?.length || 0} warning{warnings?.length !== 1 ? 's' : ''}</p>
+		</div>
+	</div>
+	<svg
+		class="w-5 h-5 text-amber-500 group-hover:translate-x-1 transition-transform"
+		fill="none"
+		stroke="currentColor"
+		viewBox="0 0 24 24"
+		aria-hidden="true"
+	>
+		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+	</svg>
+</button>
+{/if}
+
+{#if warnings && warnings.length > 0 && isOpen}
+	<!-- Modal Backdrop -->
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="warnings-modal-title"
+		on:keydown={handleKeydown}
+		transition:fade={{ duration: 200 }}
+	>
+		<!-- Modal Content -->
+		<div
+			bind:this={modalElement}
+			class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col"
+			transition:fly={{ y: 20, duration: 200 }}
+			on:click|stopPropagation
+		>
+			<!-- Modal Header -->
+			<div class="flex items-center p-4 border-b-2 border-gray-200 bg-gradient-to-r from-amber-50 to-yellow-50">
+				<h2
+					id="warnings-modal-title"
+					class="text-lg font-bold text-gray-900 flex items-center gap-2"
 				>
-					<div class="flex items-start gap-3">
-						<svg
-							class="w-6 h-6 flex-shrink-0 mt-0.5"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-							aria-hidden="true"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d={getIcon(warning.severity)}
-							/>
-						</svg>
-						<div class="flex-1">
-							<div class="font-bold text-sm mb-1.5 uppercase tracking-wide">{warning.type.replace(/_/g, ' ')}</div>
-							<div class="text-sm font-medium">{warning.message}</div>
+					<svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+					</svg>
+					Warnings & Notices
+				</h2>
+			</div>
+
+			<!-- Modal Body -->
+			<div class="p-4">
+				<div
+					class="space-y-2 text-center"
+					role={warnings.some((w) => w.severity === 'error') ? 'alert' : 'status'}
+				>
+					{#each warnings as warning (warning.message)}
+						<div class="text-sm font-medium text-gray-800">
+							{warning.message}
 						</div>
-					</div>
+					{/each}
 				</div>
-			{/each}
+			</div>
+
+			<!-- Modal Footer -->
+			<div class="p-4 border-t-2 border-gray-200 bg-gray-50">
+				<button
+					bind:this={understandButtonElement}
+					on:click={closeModal}
+					class="w-full px-4 py-2 bg-teal-primary text-white font-semibold text-sm rounded-xl hover:bg-teal-dark transition-all focus:outline-none focus:ring-2 focus:ring-teal-primary focus:ring-offset-2 shadow-lg hover:shadow-xl"
+				>
+					I Understand
+				</button>
+			</div>
 		</div>
 	</div>
 {/if}

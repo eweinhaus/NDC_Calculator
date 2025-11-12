@@ -258,6 +258,35 @@ Response formatting builds structured JSON responses with all required fields.
 - **Touch Targets:** Minimum 44px height for interactive elements on mobile
 - **Flexible Layouts:** Use Tailwind flexbox/grid utilities for responsive layouts
 
+### Layout Structure (✅ Updated 2025-01-27, ✅ Side-by-Side Layout 2025-01-27)
+**Decision:** Side-by-side layout with form on left, results on right (desktop), stacked on mobile/tablet
+
+**Desktop Layout (≥1024px):**
+- **Two-column grid:** `lg:grid-cols-[480px_1fr]`
+- **Left Column:** Calculation form (480px fixed width, sticky positioning)
+- **Right Column:** Results display (flexible width, scrollable)
+- **Gap:** 6-8 spacing units between columns
+
+**Mobile/Tablet Layout (<1024px):**
+- **Single column:** Stacked vertically
+- Form appears first, then results below
+
+**Results Layout Hierarchy:**
+1. **Hero Section:** Recommended NDC (full-width, teal background, most prominent)
+2. **Supporting Info:** Two-column layout (Drug Info + Quantity Breakdown)
+3. **Warnings:** Full-width section below supporting info
+4. **Alternatives:** Full-width collapsible section
+5. **Inactive NDCs:** Full-width collapsible section
+
+**Rationale:**
+- Side-by-side layout reduces vertical scrolling and improves workflow efficiency
+- Form remains visible and accessible while viewing results
+- Recommended NDC is the primary action item for pharmacists
+- Hero section ensures immediate visibility
+- Supporting info provides context without competing for attention
+- Warnings and alternatives are important but secondary
+- Responsive design ensures usability on all screen sizes
+
 ### Loading States (✅ Implemented)
 - **Skeleton Loaders:** Match actual content layout, shimmer animation
 - **Accessibility:** `aria-busy="true"`, `aria-label="Loading..."`

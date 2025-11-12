@@ -13,6 +13,8 @@
 	export let results: CalculationResult;
 
 	let isCopying = false;
+	let alternativeNdcsComponent: AlternativeNdcs;
+	let warningsSectionComponent: WarningsSection;
 
 	function formatResultsAsText(): string {
 		let text = 'NDC Calculation Results\n';
@@ -55,57 +57,126 @@
 	}
 </script>
 
-<div class="space-y-4" aria-live="polite" aria-atomic="true">
-	<a id="main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-blue-600 focus:text-white">
+<div class="flex flex-col min-h-0" aria-live="polite" aria-atomic="true">
+	<a id="main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-teal-primary focus:text-white">
 		Skip to main content
 	</a>
 	
-	<!-- Two-column layout for main results -->
-	<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-		<!-- Left Column -->
-		<div class="space-y-4">
+	<div class="space-y-2 flex-1">
+	<!-- Main Content: Recommended NDC (60%) and Supporting Info (40%) -->
+	<div class="grid grid-cols-1 lg:grid-cols-[60%_40%] gap-3 items-start">
+		<!-- Left Column (60%): Recommended NDC -->
+		<section aria-labelledby="recommended-heading" class="flex">
+			<h2 id="recommended-heading" class="sr-only">Recommended NDC</h2>
+			<RecommendedNdc ndc={results.recommendedNdc} />
+		</section>
+
+		<!-- Right Column (40%): Drug Info and Quantity Breakdown (Stacked) -->
+		<div class="flex flex-col space-y-3" id="right-column">
+			<!-- Drug Info -->
 			<section aria-labelledby="drug-info-heading">
 				<h2 id="drug-info-heading" class="sr-only">Drug Information</h2>
 				<DrugInfoCard drug={results.drug} />
 			</section>
 
+			<!-- Quantity Breakdown -->
 			<section aria-labelledby="quantity-heading">
 				<h2 id="quantity-heading" class="sr-only">Quantity Calculation</h2>
 				<QuantityBreakdown quantity={results.quantity} />
 			</section>
 		</div>
-
-	<!-- Right Column -->
-	<div class="flex flex-col">
-		<section aria-labelledby="recommended-heading" class="flex-1">
-			<h2 id="recommended-heading" class="sr-only">Recommended NDC</h2>
-			<RecommendedNdc ndc={results.recommendedNdc} />
-		</section>
-	</div>
 	</div>
 
-	<!-- Full-width sections below -->
-	{#if results.alternatives && results.alternatives.length > 0}
-		<section aria-labelledby="alternatives-heading">
-			<h2 id="alternatives-heading" class="sr-only">Alternative NDCs</h2>
-			{#key results.drug.name}
-				<AlternativeNdcs alternatives={results.alternatives} />
-			{/key}
-		</section>
-	{/if}
-
+	<!-- Warnings Section - Component rendered but button hidden, modal only -->
 	{#if results.warnings && results.warnings.length > 0}
-		<section aria-labelledby="warnings-heading">
-			<h2 id="warnings-heading" class="sr-only">Warnings and Notices</h2>
-			<WarningsSection warnings={results.warnings} />
-		</section>
+		<div class="absolute w-0 h-0 overflow-hidden">
+			<WarningsSection bind:this={warningsSectionComponent} warnings={results.warnings} showButton={false} />
+		</div>
 	{/if}
 
+	<!-- Alternatives Section - Component rendered but button hidden, modal only -->
+	{#if results.alternatives && results.alternatives.length > 0}
+		<div class="absolute w-0 h-0 overflow-hidden">
+			<AlternativeNdcs bind:this={alternativeNdcsComponent} alternatives={results.alternatives} showButton={false} />
+		</div>
+	{/if}
+
+	<!-- Inactive NDCs Section (Full-width, collapsible) -->
 	{#if results.inactiveNdcs && results.inactiveNdcs.length > 0}
 		<section aria-labelledby="inactive-heading">
 			<h2 id="inactive-heading" class="sr-only">Inactive NDCs</h2>
 			<InactiveNdcsList inactiveNdcs={results.inactiveNdcs} />
 		</section>
 	{/if}
+	</div>
+
+	<!-- Action Buttons at Bottom (Aligned with form) -->
+	<div class="flex gap-3 pt-6 lg:sticky lg:bottom-4 lg:z-10">
+		<!-- Alternative NDCs Button (Left) -->
+		{#if results.alternatives && results.alternatives.length > 0}
+			<button
+				type="button"
+				on:click={() => alternativeNdcsComponent?.openModal()}
+				class="flex-1 flex items-center justify-between p-3 bg-white rounded-xl shadow-lg border-2 border-teal-primary hover:bg-teal-50 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-teal-primary focus:ring-offset-2 transition-all group"
+				aria-label="View alternative NDCs ({results.alternatives?.length || 0})"
+			>
+				<div class="flex items-center gap-3">
+					<div class="p-2 bg-teal-primary rounded-lg group-hover:bg-teal-dark transition-colors">
+						<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+						</svg>
+					</div>
+					<div class="text-left">
+						<h3 class="text-base font-bold text-gray-900 group-hover:text-teal-primary transition-colors">
+							Alternative NDCs
+						</h3>
+						<p class="text-xs text-gray-500 mt-0.5">{results.alternatives?.length || 0} options</p>
+					</div>
+				</div>
+				<svg
+					class="w-5 h-5 text-teal-primary group-hover:translate-x-1 transition-transform"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+					aria-hidden="true"
+				>
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+				</svg>
+			</button>
+		{/if}
+
+		<!-- Warnings Button (Right) -->
+		{#if results.warnings && results.warnings.length > 0}
+			<button
+				type="button"
+				on:click={() => warningsSectionComponent?.openModal()}
+				class="flex-1 flex items-center justify-between p-3 bg-white rounded-xl shadow-lg border-2 border-amber-500 hover:bg-amber-50 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all group"
+				aria-label="View warnings ({results.warnings?.length || 0})"
+			>
+				<div class="flex items-center gap-3">
+					<div class="p-2 bg-amber-500 rounded-lg group-hover:bg-amber-600 transition-colors">
+						<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+						</svg>
+					</div>
+					<div class="text-left">
+						<h3 class="text-base font-bold text-gray-900 group-hover:text-amber-600 transition-colors">
+							Warnings
+						</h3>
+						<p class="text-xs text-gray-500 mt-0.5">{results.warnings?.length || 0} warning{results.warnings?.length !== 1 ? 's' : ''}</p>
+					</div>
+				</div>
+				<svg
+					class="w-5 h-5 text-amber-500 group-hover:translate-x-1 transition-transform"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+					aria-hidden="true"
+				>
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+				</svg>
+			</button>
+		{/if}
+	</div>
 </div>
 
