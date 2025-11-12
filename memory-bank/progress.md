@@ -11,7 +11,10 @@
 
 ### Features
 - ✅ Drug name autocomplete (RxNorm + FDA API)
-- ✅ NDC code autocomplete (FDA API with wildcard search) - **NEW**
+- ✅ NDC code autocomplete (FDA API with wildcard search)
+- ✅ Autocomplete preload system (common drugs/NDCs preloaded client-side for zero latency)
+- ✅ Input type detection (automatically detects NDC codes vs drug names)
+- ✅ Calculate endpoint supports both drug names and NDC codes as input
 
 ## What's Left to Build
 

@@ -195,6 +195,69 @@ describe('NDC Selector', () => {
 			expect(results.length).toBeGreaterThan(0);
 			expect(results[0].packageSize).toBe(30); // Parsed from description
 		});
+
+		it('should prioritize preferred NDC when provided', () => {
+			const ndcList: NdcInfo[] = [
+				{
+					ndc: '0002-3227-30',
+					packageSize: 30,
+					packageDescription: '30 CAPSULE in 1 BOTTLE',
+					manufacturer: 'Manufacturer A',
+					dosageForm: 'CAPSULE',
+					active: true,
+				},
+				{
+					ndc: '0093-3546-56',
+					packageSize: 30,
+					packageDescription: '30 CAPSULE in 1 BOTTLE',
+					manufacturer: 'Manufacturer B',
+					dosageForm: 'CAPSULE',
+					active: true,
+				},
+			];
+
+			// Without preferred NDC, both should have same score (exact match)
+			// Note: selectOptimal generates both single-pack and multi-pack selections,
+			// so we'll get 4 results (2 NDCs × 2 selection types)
+			const resultsWithoutPreferred = selectOptimal(ndcList, 30, 5);
+			expect(resultsWithoutPreferred.length).toBeGreaterThanOrEqual(2);
+			// Top result should have score 100 (exact match)
+
+			// With preferred NDC, it should be ranked first
+			const resultsWithPreferred = selectOptimal(ndcList, 30, 5, '0093-3546-56');
+			expect(resultsWithPreferred.length).toBeGreaterThanOrEqual(2);
+			// The preferred NDC should be in the top result
+			const topResult = resultsWithPreferred[0];
+			expect(topResult.ndc).toBe('0093-3546-56');
+			expect(topResult.matchScore).toBeGreaterThan(100); // Should be boosted
+			
+			// Verify the preferred NDC appears before the other NDC
+			const preferredIndex = resultsWithPreferred.findIndex(r => r.ndc === '0093-3546-56');
+			const otherIndex = resultsWithPreferred.findIndex(r => r.ndc === '0002-3227-30');
+			expect(preferredIndex).toBeLessThan(otherIndex);
+		});
+
+		it('should handle preferred NDC with different formatting', () => {
+			const ndcList: NdcInfo[] = [
+				{
+					ndc: '0002-3227-30',
+					packageSize: 30,
+					packageDescription: '30 CAPSULE in 1 BOTTLE',
+					manufacturer: 'Manufacturer A',
+					dosageForm: 'CAPSULE',
+					active: true,
+				},
+			];
+
+			// Test with preferred NDC in different formats
+			const results1 = selectOptimal(ndcList, 30, 5, '0002-3227-30');
+			const results2 = selectOptimal(ndcList, 30, 5, '0002322730');
+			const results3 = selectOptimal(ndcList, 30, 5, '0002 3227 30');
+
+			expect(results1[0].matchScore).toBeGreaterThan(100);
+			expect(results2[0].matchScore).toBeGreaterThan(100);
+			expect(results3[0].matchScore).toBeGreaterThan(100);
+		});
 	});
 });
 

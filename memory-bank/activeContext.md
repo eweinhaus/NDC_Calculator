@@ -30,6 +30,15 @@
 
 ## Recent Changes
 
+- ✅ **Autocomplete Preload Feature:** Implemented hybrid autocomplete system with preloaded common drugs and NDCs
+  - ✅ Created `/api/autocomplete/preload` endpoint that returns curated list of common drugs and NDCs from test data
+  - ✅ Created `localStorageCache.ts` utility for client-side caching with TTL support (24-hour TTL)
+  - ✅ Created `autocompletePreload.ts` Svelte store for managing preloaded data state
+  - ✅ Preload data loads in background after page mount (non-blocking)
+  - ✅ Autocomplete component filters preloaded data first (instant, zero latency) before falling back to API
+  - ✅ Reduces API calls for common drugs/NDCs (most use cases)
+  - ✅ Graceful fallback to API when preloaded data doesn't match
+  - ✅ Data sourced from test data files and curated common drug list (~65+ drugs, multiple NDC sources)
 - ✅ **NDC Autocomplete Feature:** Added autocomplete functionality for NDC codes alongside existing drug name autocomplete
   - ✅ Created input type detection utility (`inputDetector.ts`) to distinguish NDC codes from drug names
   - ✅ Added `getNdcAutocompleteSuggestions()` function to FDA service with wildcard search support
@@ -244,6 +253,13 @@
 - `/src/tests/unit/cache.test.ts` - Cache service unit tests
 - `/src/tests/unit/requestDeduplicator.test.ts` - Request deduplicator unit tests
 - `/src/tests/integration/services.test.ts` - API services integration tests
+
+### Autocomplete Preload Deliverables
+- `/src/routes/api/autocomplete/preload/+server.ts` - Preload endpoint (common drugs/NDCs)
+- `/src/lib/utils/localStorageCache.ts` - Client-side localStorage cache with TTL
+- `/src/lib/stores/autocompletePreload.ts` - Svelte store for preloaded data
+- `/src/lib/utils/inputDetector.ts` - Input type detection utility (NDC vs drug name)
+- `/src/routes/api/autocomplete/ndc/+server.ts` - NDC autocomplete endpoint
 
 ### Phase 3 Deliverables
 - `/src/lib/constants/sigPatterns.ts` - SIG regex patterns and constants

@@ -25,6 +25,14 @@ export function rxnormNdcsKey(rxcui: string): string {
 }
 
 /**
+ * Generate cache key for RxNorm NDC to RxCUI lookup.
+ */
+export function rxnormNdcKey(ndc: string): string {
+	const normalized = ndc.replace(/-/g, '').trim();
+	return `rxnorm:ndc:${normalized}`;
+}
+
+/**
  * Generate cache key for FDA package details.
  */
 export function fdaPackageKey(ndc: string): string {

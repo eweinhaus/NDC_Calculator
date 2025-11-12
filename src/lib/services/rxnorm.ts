@@ -7,8 +7,13 @@ import { logger } from '$lib/utils/logger.js';
 import { withRetry } from '$lib/utils/retry.js';
 import { cache } from './cache.js';
 import { deduplicate } from '$lib/utils/requestDeduplicator.js';
-import { rxnormNameKey, rxnormNdcsKey } from '$lib/constants/cacheKeys.js';
-import { RXNORM_NAME_TTL as NAME_TTL, RXNORM_NDCS_TTL as NDC_TTL } from '$lib/constants/cacheTtl.js';
+import { rxnormNameKey, rxnormNdcsKey, rxnormNdcKey } from '$lib/constants/cacheKeys.js';
+import {
+	RXNORM_NAME_TTL as NAME_TTL,
+	RXNORM_NDCS_TTL as NDC_TTL,
+	RXNORM_NDC_TTL as NDC_TO_RXCUI_TTL
+} from '$lib/constants/cacheTtl.js';
+import { normalizeNdc } from '$lib/utils/ndcNormalizer.js';
 
 const BASE_URL = 'https://rxnav.nlm.nih.gov/REST';
 const TIMEOUT_MS = 10000; // 10 seconds
@@ -178,6 +183,58 @@ export async function getAllNdcs(rxcui: string): Promise<string[]> {
 			return normalizedNdcs;
 		} catch (error) {
 			logger.error(`Error getting NDCs for RxCUI: ${rxcui}`, error as Error);
+			throw error;
+		}
+	});
+}
+
+/**
+ * Get RxCUI by NDC code.
+ * Provides fallback for workflows that begin with an NDC instead of a drug name.
+ * @param ndc - NDC code in any format (10/11 digits, with/without dashes)
+ * @returns RxCUI string or null if not found
+ */
+export async function getRxcuiByNdc(ndc: string): Promise<string | null> {
+	const normalized = normalizeNdc(ndc);
+	const digitsOnly = normalized?.replace(/-/g, '') ?? ndc.replace(/[^0-9]/g, '');
+
+	if (!digitsOnly || digitsOnly.length < 10) {
+		logger.warn(`Invalid NDC provided for RxCUI lookup: ${ndc}`);
+		return null;
+	}
+
+	const cacheKey = rxnormNdcKey(digitsOnly);
+
+	return deduplicate(cacheKey, async () => {
+		const cached = await cache.get<string>(cacheKey);
+		if (cached === '__NULL__') {
+			logger.debug(`RxNorm NDC cache miss (memoized): ${ndc}`);
+			return null;
+		}
+		if (cached) {
+			logger.debug(`RxNorm NDC cache hit: ${ndc} -> ${cached}`);
+			return cached;
+		}
+
+		try {
+			const endpoint = `/rxcui.json?idtype=NDC&id=${digitsOnly}`;
+			logger.debug(`RxNorm NDC lookup request: ${endpoint}`);
+			const response = await makeRequest<RxNormIdGroup>(endpoint);
+			const rxnormIds = response.idGroup?.rxnormId;
+
+			if (!rxnormIds || rxnormIds.length === 0) {
+				logger.info(`No RxCUI found for NDC: ${ndc}`);
+				await cache.set(cacheKey, '__NULL__', NDC_TO_RXCUI_TTL);
+				return null;
+			}
+
+			const rxcui = rxnormIds[0];
+			logger.info(`Found RxCUI ${rxcui} for NDC: ${ndc}`);
+			await cache.set(cacheKey, rxcui, NDC_TO_RXCUI_TTL);
+
+			return rxcui;
+		} catch (error) {
+			logger.error(`Error looking up RxCUI for NDC: ${ndc}`, error as Error);
 			throw error;
 		}
 	});

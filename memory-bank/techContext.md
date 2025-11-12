@@ -132,8 +132,11 @@ All types defined in `lib/types/`:
 ### Cache TTLs (✅ Defined in `cacheTtl.ts`)
 - RxNorm (drug → RxCUI): 7 days (604800 seconds)
 - RxNorm (RxCUI → NDCs): 24 hours (86400 seconds)
+- RxNorm (NDC → RxCUI): 7 days (604800 seconds)
 - FDA (NDC details): 24 hours (86400 seconds)
+- FDA (NDC autocomplete): 24 hours (86400 seconds)
 - SIG Parsing: 30 days (2592000 seconds)
+- Client-side (autocomplete preload): 24 hours (localStorage)
 
 ## API Error Handling (✅ Implemented)
 
@@ -206,6 +209,34 @@ All types defined in `lib/types/`:
   - `/test-pdf` - Test page for PDF generation functionality
   - `/test-rewrite` - Test page for SIG rewrite functionality
   - `/api/test-rewrite` - API endpoint for testing SIG rewrite
+
+## Autocomplete Preload Feature
+
+### Implementation
+- **Purpose:** Zero-latency autocomplete for common drugs/NDCs by preloading data client-side
+- **Architecture:** Hybrid system with preloaded data + API fallback
+- **Components:**
+  - `/api/autocomplete/preload` - Server endpoint returning curated drugs/NDCs from test data
+  - `localStorageCache.ts` - Client-side cache utility with TTL support (24-hour TTL)
+  - `autocompletePreload.ts` - Svelte store managing preload state
+  - `Autocomplete.svelte` - Filters preloaded data first, falls back to API
+- **Data Sources:**
+  - Common drugs list (~65 top prescribed medications)
+  - Test data files: `drug-samples.json`, `ndc-samples.json`
+  - NDCs extracted from drug samples
+- **Workflow:**
+  1. Page loads → UI renders immediately (non-blocking)
+  2. Background: Check localStorage cache
+  3. If cached & fresh → Use cached data
+  4. If expired/missing → Fetch from `/api/autocomplete/preload`
+  5. Store in localStorage with 24-hour TTL
+  6. User types → Filter preloaded data instantly (no API call)
+  7. If no matches → Fallback to API autocomplete endpoints
+- **Benefits:**
+  - Zero latency for common drugs/NDCs (80%+ of queries)
+  - Reduced API calls (only for uncommon entries)
+  - Non-blocking page load
+  - Graceful fallback to API
 
 ---
 

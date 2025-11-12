@@ -157,12 +157,14 @@ function generateMultiPackSelection(
  * @param ndcList - List of NDC information
  * @param targetQuantity - Target quantity to match
  * @param maxResults - Maximum number of results to return (default: 5)
+ * @param preferredNdc - Optional NDC to prioritize (e.g., user-provided input NDC)
  * @returns Array of NDC selections ranked by match score
  */
 export function selectOptimal(
 	ndcList: NdcInfo[],
 	targetQuantity: number,
-	maxResults: number = 5
+	maxResults: number = 5,
+	preferredNdc?: string
 ): NdcSelection[] {
 	if (!ndcList || ndcList.length === 0) {
 		return [];
@@ -202,6 +204,30 @@ export function selectOptimal(
 		logger.debug(`Filtered ${inactiveNdcs.length} inactive NDCs`, {
 			inactiveNdcs: inactiveNdcs.map((n) => n.ndc),
 		});
+	}
+
+	// If a preferred NDC is specified, boost its score significantly
+	// This ensures user-specified NDCs are strongly prioritized
+	if (preferredNdc) {
+		const normalizedPreferred = preferredNdc.trim().replace(/\s/g, '');
+		for (const candidate of candidates) {
+			const normalizedCandidate = candidate.ndc.trim().replace(/\s/g, '');
+			// Check if this candidate matches the preferred NDC (with or without dashes)
+			if (normalizedCandidate === normalizedPreferred || 
+			    normalizedCandidate.replace(/-/g, '') === normalizedPreferred.replace(/-/g, '')) {
+				const originalScore = candidate.matchScore;
+				// Boost by 20 points to ensure it's preferred over other similar options
+				// This puts it ahead of other NDCs with similar packaging
+				candidate.matchScore = Math.min(100, candidate.matchScore + 20);
+				logger.debug(`Boosted score for preferred NDC: ${candidate.ndc}`, {
+					originalScore,
+					boostedScore: candidate.matchScore,
+					preferredNdc,
+					boost: 20
+				});
+				break;
+			}
+		}
 	}
 
 	// Rank by match score (descending)

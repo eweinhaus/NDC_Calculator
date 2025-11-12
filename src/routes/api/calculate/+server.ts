@@ -5,8 +5,8 @@ import { parse as parseSig } from '$lib/core/sigParser';
 import { calculate as calculateQuantity } from '$lib/core/quantityCalculator';
 import { selectOptimal } from '$lib/core/ndcSelector';
 import { generateWarnings } from '$lib/core/warningGenerator';
-import { searchByDrugName, getSpellingSuggestions } from '$lib/services/rxnorm';
-import { getPackagesByRxcui, getPackageDetails, type FdaPackageDetails } from '$lib/services/fda';
+import { searchByDrugName, getSpellingSuggestions, getRxcuiByNdc } from '$lib/services/rxnorm';
+import { getPackagesByRxcui, getPackageDetails, getAllPackages, type FdaPackageDetails } from '$lib/services/fda';
 import { parsePackageDescription } from '$lib/core/packageParser';
 import { logger } from '$lib/utils/logger';
 import { detectInputType } from '$lib/utils/inputDetector.js';
@@ -20,9 +20,11 @@ import type { Warning } from '$lib/types/warning.js';
  * Complete calculation flow: drug lookup → NDC retrieval → SIG parsing → calculation → NDC selection
  */
 export const POST: RequestHandler = async ({ request }) => {
-	// Force output to stderr (unbuffered)
+	// Force output to stderr (unbuffered) - these logs appear in server terminal
 	process.stderr.write('🚀 [CALCULATE] POST request received at /api/calculate\n');
+	process.stderr.write('═══════════════════════════════════════════════════════════\n');
 	console.error('🚀 [CALCULATE] POST request received at /api/calculate');
+	console.error('═══════════════════════════════════════════════════════════');
 	try {
 		const body: CalculationRequest = await request.json();
 		process.stderr.write(`📝 [CALCULATE] Request body: ${JSON.stringify({ drugInput: body.drugInput, sig: body.sig, daysSupply: body.daysSupply })}\n`);
@@ -75,50 +77,130 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		let rxcui: string | null = null;
 		let drugName: string | null = null;
+		let packageDetails: FdaPackageDetails | null = null; // Declare outside if block for later use
 
 		if (inputType === 'ndc') {
+			// NOTE: The drug-name workflow begins by normalizing against RxNorm to obtain an RxCUI.
+			// Historically the NDC workflow bypassed that step and relied solely on FDA package metadata.
+			// To keep behaviour aligned (and improve resilience), we now fall back to an explicit
+			// RxNorm NDC→RxCUI lookup whenever the FDA path cannot provide the identifier.
 			// Input is an NDC code - get package details and extract RxCUI
+			console.error('🔍 [CALCULATE] Detected NDC code, fetching package details', { 
+				ndc: trimmedInput,
+				inputType 
+			});
 			console.log('🔍 [CALCULATE] Detected NDC code, fetching package details', { ndc: trimmedInput });
 			logger.debug('Detected NDC code, fetching package details', { ndc: trimmedInput });
-			
-			const packageDetails = await getPackageDetails(trimmedInput);
-			
-			if (!packageDetails) {
-				console.error('❌ [CALCULATE] NDC not found', { ndc: trimmedInput });
-				logger.warn('NDC not found', { ndc: trimmedInput });
-				return json<CalculationResponse>({
-					success: false,
-					error: {
-						code: 'DRUG_NOT_FOUND',
-						message: 'NDC code not found. Please check the NDC code and try again.',
-					},
+			try {
+				console.error('📞 [CALCULATE] Calling getPackageDetails() for NDC:', trimmedInput);
+				packageDetails = await getPackageDetails(trimmedInput);
+				console.error('📥 [CALCULATE] getPackageDetails() returned:', {
+					found: !!packageDetails,
+					packageNdc: packageDetails?.package_ndc,
+					productNdc: packageDetails?.product_ndc,
+					hasRxcui: packageDetails?.rxcui?.length ? true : false,
+					rxcui: packageDetails?.rxcui
 				});
+			} catch (error) {
+				console.error('❌ [CALCULATE] Error fetching package details for NDC:', {
+					ndc: trimmedInput,
+					error: error instanceof Error ? error.message : String(error),
+					stack: error instanceof Error ? error.stack : undefined
+				});
+				logger.error('Error fetching package details for NDC', error as Error, { ndc: trimmedInput });
 			}
 
-			// Extract RxCUI from package details
-			if (packageDetails.rxcui && packageDetails.rxcui.length > 0) {
+			if (packageDetails) {
+				logger.info(
+					'FDA package lookup succeeded for NDC',
+					undefined,
+					{
+						ndc: trimmedInput,
+						productNdc: packageDetails.product_ndc,
+						hasRxcui: packageDetails.rxcui?.length ? true : false
+					}
+				);
+			} else {
+				logger.warn('FDA package lookup returned no result for NDC', undefined, { ndc: trimmedInput });
+			}
+
+			// Extract RxCUI from package details when available
+			if (packageDetails?.rxcui && packageDetails.rxcui.length > 0) {
 				rxcui = packageDetails.rxcui[0];
-				// Try to get drug name from package details (we'll use generic_name from FDA response)
-				// For now, we'll use the NDC as the identifier
-				drugName = trimmedInput; // Will be updated later from FDA data
-				console.log('✅ [CALCULATE] NDC found, extracted RxCUI', { 
+				drugName = trimmedInput;
+				console.log('✅ [CALCULATE] NDC found, extracted RxCUI from FDA package', {
 					ndc: trimmedInput,
 					rxcui,
 					packageNdc: packageDetails.package_ndc
 				});
 			} else {
-				console.error('❌ [CALCULATE] NDC found but no RxCUI associated', { 
+				console.warn('⚠️ [CALCULATE] FDA package did not include RxCUI, trying fallbacks', {
 					ndc: trimmedInput,
-					packageDetails 
+					hasGenericName: !!packageDetails?.generic_name,
+					genericName: packageDetails?.generic_name
 				});
-				logger.warn('NDC found but no RxCUI associated', { ndc: trimmedInput });
-				return json<CalculationResponse>({
-					success: false,
-					error: {
-						code: 'DRUG_NOT_FOUND',
-						message: 'NDC code found but no drug information available. This NDC may not be linked to a drug in our system.',
-					},
-				});
+				
+				// Try RxNorm NDC→RxCUI lookup first
+				logger.info('Fallback 1: RxNorm NDC→RxCUI lookup', undefined, { ndc: trimmedInput });
+				rxcui = await getRxcuiByNdc(trimmedInput);
+				
+				// If that fails but we have a generic name, try looking up by drug name
+				if (!rxcui && packageDetails?.generic_name) {
+					console.error('⚠️ [CALCULATE] RxNorm NDC lookup failed, trying generic name from FDA', {
+						genericName: packageDetails.generic_name
+					});
+					logger.info('Fallback 2: RxNorm drug name lookup using FDA generic name', undefined, {
+						genericName: packageDetails.generic_name
+					});
+					rxcui = await searchByDrugName(packageDetails.generic_name);
+					if (rxcui) {
+						console.log('✅ [CALCULATE] Found RxCUI via generic name lookup', {
+							genericName: packageDetails.generic_name,
+							rxcui
+						});
+						drugName = packageDetails.generic_name;
+					}
+				}
+				
+				if (rxcui) {
+					console.log('✅ [CALCULATE] RxNorm fallback returned RxCUI for NDC', {
+						ndc: trimmedInput,
+						rxcui,
+						method: packageDetails?.generic_name ? 'generic_name' : 'ndc'
+					});
+					if (!drugName) {
+						drugName = packageDetails?.generic_name || trimmedInput;
+					}
+				}
+			}
+
+			if (!rxcui) {
+				// If we have package details but no RxCUI, we can still proceed using the product NDC
+				if (packageDetails && packageDetails.product_ndc) {
+					console.error('⚠️ [CALCULATE] No RxCUI found, but we have package details. Will use product NDC to fetch all packages', {
+						ndc: trimmedInput,
+						productNdc: packageDetails.product_ndc
+					});
+					logger.info('No RxCUI found, but proceeding with product NDC', undefined, {
+						ndc: trimmedInput,
+						productNdc: packageDetails.product_ndc
+					});
+					// Set a flag to use product NDC instead of RxCUI
+					// We'll handle this in the next step
+				} else {
+					console.error('❌ [CALCULATE] Unable to resolve RxCUI for NDC after FDA and RxNorm fallback, and no package details', {
+						ndc: trimmedInput
+					});
+					logger.warn('NDC not linked to any RxCUI and no package details', undefined, { ndc: trimmedInput });
+					return json<CalculationResponse>({
+						success: false,
+						error: {
+							code: 'DRUG_NOT_FOUND',
+							message:
+								'NDC code not found in FDA or RxNorm data sources. Please verify the code or try a different NDC.'
+						}
+					});
+				}
 			}
 		} else {
 			// Input is a drug name - lookup RxCUI
@@ -150,16 +232,38 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 		}
 
-		// Step 2: Get NDCs for this RxCUI from FDA API
-		console.log('🔍 [CALCULATE] Fetching NDCs from FDA API', { 
-			rxcui, 
-			drugInput: body.drugInput.trim() 
-		});
-		logger.info('Fetching NDCs from FDA API', { 
-			rxcui, 
-			drugInput: body.drugInput.trim() 
-		});
-		const fdaPackages = await getPackagesByRxcui(rxcui);
+		// Step 2: Get NDCs from FDA API
+		// If we have an RxCUI, use it. Otherwise, if we have package details with product NDC, use that.
+		let fdaPackages: FdaPackageDetails[] = [];
+		
+		if (rxcui) {
+			console.log('🔍 [CALCULATE] Fetching NDCs from FDA API by RxCUI', { 
+				rxcui, 
+				drugInput: body.drugInput.trim() 
+			});
+			logger.info('Fetching NDCs from FDA API by RxCUI', { 
+				rxcui, 
+				drugInput: body.drugInput.trim() 
+			});
+			fdaPackages = await getPackagesByRxcui(rxcui);
+		} else if (inputType === 'ndc' && packageDetails && packageDetails.product_ndc) {
+			// No RxCUI, but we have package details - fetch all packages for this product NDC
+			console.error('🔍 [CALCULATE] Fetching NDCs from FDA API by product NDC (no RxCUI available)', {
+				productNdc: packageDetails.product_ndc,
+				drugInput: body.drugInput.trim()
+			});
+			logger.info('Fetching NDCs from FDA API by product NDC', {
+				productNdc: packageDetails.product_ndc,
+				drugInput: body.drugInput.trim()
+			});
+			fdaPackages = await getAllPackages(packageDetails.product_ndc);
+			
+			// If we got packages, we can extract drug name from the first package
+			if (fdaPackages.length > 0 && !drugName) {
+				// Try to get drug name from package metadata or use NDC as fallback
+				drugName = trimmedInput;
+			}
+		}
 
 		console.log('📦 [CALCULATE] FDA packages retrieved', {
 			rxcui,
@@ -340,8 +444,14 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		// Step 5: Select optimal NDCs
-		logger.debug('Selecting optimal NDCs', { targetQuantity: quantity.total, ndcCount: activeNdcs.length });
-		const selections = selectOptimal(activeNdcs, quantity.total, 5);
+		// If input was an NDC, prioritize that NDC in the selection
+		const preferredNdc = inputType === 'ndc' ? trimmedInput : undefined;
+		logger.debug('Selecting optimal NDCs', { 
+			targetQuantity: quantity.total, 
+			ndcCount: activeNdcs.length,
+			preferredNdc 
+		});
+		const selections = selectOptimal(activeNdcs, quantity.total, 5, preferredNdc);
 
 		if (selections.length === 0) {
 			return json<CalculationResponse>({
@@ -364,7 +474,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			: [];
 
 		// Build drug info - get drug name from RxNorm if we have RxCUI
-		// If input was NDC, we need to get the drug name from RxNorm
+		// If input was NDC, we need to get the drug name from RxNorm or FDA package
 		let finalDrugName = drugName;
 		if (inputType === 'ndc' && rxcui) {
 			// Try to get drug name from RxNorm using RxCUI
@@ -385,12 +495,20 @@ export const POST: RequestHandler = async ({ request }) => {
 			} catch (error) {
 				logger.debug('Could not get drug name from RxNorm, using NDC as fallback', { rxcui, error });
 			}
+		} else if (inputType === 'ndc' && !rxcui && packageDetails) {
+			// No RxCUI, but we have package details - try to extract drug name from FDA data
+			// The package details might have generic_name or brand_name in the original FDA response
+			// For now, use the NDC as the name, but we could enhance this later
+			finalDrugName = packageDetails.package_ndc || body.drugInput.trim();
+			console.error('⚠️ [CALCULATE] No RxCUI, using NDC as drug name', {
+				finalDrugName
+			});
 		}
 
-		const firstPackage = fdaPackages[0];
+		const firstPackage = fdaPackages[0] || packageDetails;
 		const drugInfo: DrugInfo = {
 			name: finalDrugName || body.drugInput.trim(),
-			rxcui: rxcui,
+			rxcui: rxcui || undefined, // Allow undefined RxCUI
 			strength: firstPackage?.strength,
 			dosageForm: firstPackage?.dosage_form,
 		};
