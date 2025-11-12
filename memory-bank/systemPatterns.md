@@ -141,14 +141,16 @@ src/
 2. POST to `/api/calculate` → Server-side validation
 3. Input type detection (NDC vs drug name) → Route to appropriate workflow
 4. **If NDC input:**
-   - Fetch package details from FDA
-   - Extract RxCUI from package metadata
-   - Fallback to RxNorm NDC→RxCUI lookup if needed
+   - Detect NDC type: Product NDC (XXXXX-XXXX) vs Package NDC (XXXXX-XXXX-XX)
+   - **Product NDC:** Use `getAllPackages()` to fetch all packages for that product
+   - **Package NDC:** Use `getPackageDetails()` to fetch specific package
+   - Extract RxCUI from package metadata or RxNorm NDC→RxCUI lookup
+   - Fallback to RxNorm NDC→RxCUI lookup if FDA lookup fails
 5. **If drug name input:**
    - Drug normalization (RxNorm: drug name → RxCUI)
 6. Cache check → If miss, proceed to API calls
 7. Parallel execution:
-   - NDC list retrieval (FDA: RxCUI → packages via `getPackagesByRxcui()`)
+   - NDC list retrieval (FDA: RxCUI → packages via `getPackagesByRxcui()` OR product NDC → packages via `getAllPackages()`)
    - SIG parsing (regex → AI fallback → AI rewrite if needed)
 8. Quantity calculation: (dosage × frequency) × days' supply
 9. Package parsing and NDC selection
@@ -164,7 +166,12 @@ src/
 4. **API fallback path (uncommon entries):**
    - If no preload matches → Fetch from `/api/autocomplete` or `/api/autocomplete/ndc`
    - Debounced (300ms) to reduce API calls
-5. Display suggestions to user
+5. **NDC Autocomplete Validation:**
+   - Only returns package NDCs (format: XXXXX-XXXX-XX) from FDA API packaging array
+   - Validates format matches expected pattern before including
+   - Ensures package_ndc and description both exist (valid package)
+   - Filters out product NDCs and invalid/inactive NDCs
+6. Display suggestions to user
 
 ## Design Patterns
 
@@ -178,11 +185,12 @@ External API interactions are abstracted into service classes:
   - `getSpellingSuggestions()`: Spelling correction suggestions
   - `getAutocompleteSuggestions()`: Drug name autocomplete suggestions (RxNorm + FDA validation)
 - `FDAService`: Handles all FDA API calls (✅ implemented)
-  - `getPackageDetails()`: Single NDC package lookup (with package_ndc and product_ndc search strategies)
-  - `getAllPackages()`: All packages for product NDC
+  - `getPackageDetails()`: Single package NDC lookup (format: XXXXX-XXXX-XX) with multiple search strategies
+  - `getAllPackages()`: All packages for product NDC (format: XXXXX-XXXX)
   - `getPackagesByRxcui()`: All packages for a given RxCUI (with generic_name fallback)
-  - `getNdcAutocompleteSuggestions()`: NDC code autocomplete suggestions with wildcard search
+  - `getNdcAutocompleteSuggestions()`: NDC code autocomplete suggestions (validated: only package NDCs with format XXXXX-XXXX-XX)
   - Active status determination from `listing_expiration_date`
+  - **Product vs Package NDC:** System distinguishes between product NDCs (XXXXX-XXXX) and package NDCs (XXXXX-XXXX-XX) for proper API routing
 - `OpenAIService`: Handles OpenAI API calls (fallback only) (✅ implemented)
   - `parseSig()`: SIG parsing with JSON response validation
   - `rewriteSig()`: SIG rewriting/correction (typos, standardization) - fallback when both parsers fail

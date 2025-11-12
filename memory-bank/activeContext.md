@@ -30,6 +30,24 @@
 
 ## Recent Changes
 
+- ✅ **Lookup Logic Improvements (2025-01-27):** Enhanced NDC and drug lookup handling
+  - ✅ **SIG Parser Injection Fix:** Fixed unit detection for injection instructions (mL/cc volumes)
+    - Updated normalization to preserve decimal points (e.g., "0.3 mL")
+    - Added injection volume pattern to SIG patterns (priority 11)
+    - Enhanced unit extraction to detect mL/cc in injection contexts
+    - Added tests for injection volume parsing
+  - ✅ **Autocomplete Validation:** Improved NDC autocomplete to only show valid package NDCs
+    - Removed product NDC suggestions (format XXXXX-XXXX) from dropdown
+    - Added format validation (XXXXX-XXXX-XX) before including in suggestions
+    - Only includes package NDCs with both package_ndc and description from FDA API
+    - Prevents invalid/inactive NDCs from appearing in dropdown
+  - ✅ **Product vs Package NDC Handling:** Calculate endpoint now distinguishes between product and package NDCs
+    - Product NDC (XXXXX-XXXX): Uses `getAllPackages()` to fetch all packages for that product
+    - Package NDC (XXXXX-XXXX-XX): Uses `getPackageDetails()` to fetch specific package
+    - Improved error handling for both NDC types
+  - ✅ **Error Message Improvements:** Enhanced error messages for edge cases
+    - Clearer message when drug exists in RxNorm but has no NDCs in FDA database
+    - Better explanation for drugs that may be new, discontinued, or not available in US market
 - ✅ **Special Dosage Forms Support:** Implemented comprehensive regex-first, AI-fallback approach for liquids, insulin, and inhalers
   - ✅ Extended type definitions (ParsedSig, ParsedPackage) with optional metadata fields
   - ✅ Created unit conversion utility (`unitConverter.ts`) for liquid volumes and insulin units
@@ -337,5 +355,5 @@
 
 ---
 
-**Last Updated:** Edge Case Fixes Complete (2025-01-27) - 336 Tests Passing ✅
+**Last Updated:** Lookup Logic Improvements Complete (2025-01-27) - Injection Parsing, NDC Validation, Product/Package NDC Handling ✅
 

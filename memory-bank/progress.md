@@ -10,11 +10,14 @@
 - ✅ Project structure defined
 
 ### Features
-- ✅ Drug name autocomplete (RxNorm + FDA API)
-- ✅ NDC code autocomplete (FDA API with wildcard search)
+- ✅ Drug name autocomplete (RxNorm + FDA API with validation)
+- ✅ NDC code autocomplete (FDA API with validation - only package NDCs)
 - ✅ Autocomplete preload system (common drugs/NDCs preloaded client-side for zero latency)
 - ✅ Input type detection (automatically detects NDC codes vs drug names)
 - ✅ Calculate endpoint supports both drug names and NDC codes as input
+- ✅ Product vs Package NDC handling (distinguishes XXXXX-XXXX vs XXXXX-XXXX-XX formats)
+- ✅ Injection instruction parsing (correctly detects mL/cc volumes in injection contexts)
+- ✅ Improved error messages (clear explanations for drugs with no NDCs)
 
 ## Special Dosage Forms Support ✅ COMPLETE
 
