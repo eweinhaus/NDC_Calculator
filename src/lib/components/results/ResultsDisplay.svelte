@@ -150,7 +150,7 @@
 			<button
 				type="button"
 				on:click={() => warningsSectionComponent?.openModal()}
-				class="flex-1 flex items-center justify-between p-3 bg-offwhite-warm rounded-md shadow-sm border-2 border-amber-500 hover:bg-red-500 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all group"
+				class="flex-1 flex items-center justify-between p-3 bg-white rounded-md shadow-sm border-2 border-amber-500 hover:bg-amber-500 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all group"
 				aria-label="View warnings ({results.warnings?.length || 0})"
 			>
 				<div class="flex items-center gap-3">
@@ -160,14 +160,14 @@
 						</svg>
 					</div>
 					<div class="text-left">
-						<h3 class="text-base font-bold text-gray-900 group-hover:text-amber-600 transition-colors">
+						<h3 class="text-base font-bold text-gray-900 group-hover:text-white transition-colors">
 							Warnings
 						</h3>
-						<p class="text-xs text-gray-500 mt-0.5">{results.warnings?.length || 0} warning{results.warnings?.length !== 1 ? 's' : ''}</p>
+						<p class="text-xs text-gray-500 group-hover:text-white/90 mt-0.5 transition-colors">{results.warnings?.length || 0} warning{results.warnings?.length !== 1 ? 's' : ''}</p>
 					</div>
 				</div>
 				<svg
-					class="w-5 h-5 text-amber-500 group-hover:translate-x-1 transition-transform"
+					class="w-5 h-5 text-amber-500 group-hover:text-white group-hover:translate-x-1 transition-all"
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24"
